@@ -143,8 +143,8 @@ function onFileLoaded(err, data) {
 
 				var instrumentChange = false;
 
-				if ((row.instrumentNumber!=0) && (row.instrumentNumber!=trackInstrumentNumber[t])) {
-					trackInstrumentNumber[t] = row.instrumentNumber;
+				if ((row.instrument!=0) && (row.instrument!=trackInstrumentNumber[t])) {
+					trackInstrumentNumber[t] = row.instrument;
 					instrumentChange = true;
 				}
 
@@ -157,7 +157,7 @@ function onFileLoaded(err, data) {
 							instrumentData[t].push.apply(instrumentData[t],_.times(Math.max(0,vBlankSpeed-1), _.constant(0)));
 							break;
 						case 0xE:
-							switch (row.parameter & 0xF0 >>> 4) {
+							switch ((row.parameter & 0xF0) >>> 4) {
 								case 0xD:
 									var delay = row.parameter & 0x0F;
 									noteTriggerData[t].push.apply(noteTriggerData[t],_.times(Math.min(delay,vBlankSpeed), _.constant(false)));
@@ -256,7 +256,7 @@ function onFileLoaded(err, data) {
 						}
 						break;
 					case 0x4:
-						var speed = row.parameter & 0xF0 >>> 4;
+						var speed = (row.parameter & 0xF0) >>> 4;
 						var depth = row.parameter & 0x0F;
 
 						if (speed!=0) {
@@ -277,7 +277,7 @@ function onFileLoaded(err, data) {
 						}
 						break;
 					case 0xE:
-						switch (row.parameter & 0xF0 >>> 4) {
+						switch ((row.parameter & 0xF0) >>> 4) {
 							case 0x1:
 								trackPeriod[t]-=row.parameter & 0x0F;
 								if (trackPeriod[t]<MIN_PERIOD) {
@@ -292,7 +292,7 @@ function onFileLoaded(err, data) {
 								break;
 						}
 					default:
-						periodData[t].push.apply(periodData[t],_.times(vBlankSpeed, trackPeriod[t]));	
+						periodData[t].push.apply(periodData[t],_.times(vBlankSpeed, _.constant(trackPeriod[t])));	
 				}
 			}
 
@@ -311,7 +311,7 @@ function onFileLoaded(err, data) {
 					case 0x5:
 					case 0x6:
 					case 0xA:
-						var volumeDelta = (row.parameter & 0xF0 >>> 4) - (row.parameter & 0x0F);
+						var volumeDelta = ((row.parameter & 0xF0) >>> 4) - (row.parameter & 0x0F);
 						volumeData[t].push(trackVolume[t]);
 						for (var step=0;step<vBlankSpeed-1;step++) {
 							trackVolume[t]+=volumeDelta;
@@ -325,7 +325,7 @@ function onFileLoaded(err, data) {
 						}
 						break;
 					case 0xE:
-						switch (row.parameter & 0xF0 >>> 4) {
+						switch ((row.parameter & 0xF0) >>> 4) {
 							case 0xA:
 								trackVolume[t]+=row.parameter & 0x0F;
 								if (trackVolume[t]>64) {
@@ -362,7 +362,7 @@ function onFileLoaded(err, data) {
 						}
 						// no break for C command, set volume as usual
 					default:
-						volumeData[t].push.apply(volumeData[t],_.times(vBlankSpeed,trackVolume[t]));
+						volumeData[t].push.apply(volumeData[t],_.times(vBlankSpeed,_.constant(trackVolume[t])));
 				}
 
 			}
@@ -403,12 +403,12 @@ function onFileLoaded(err, data) {
 		for (var t=0;t<4;t++) {
 			
 			var word = 0x00000000;
-			word |= (volumeData[t][tick] << 25);
+			word |= ((volumeData[t][tick] << 25) >>> 0);
 
 			if (instrumentData[t][tick]!=0) {
-				word |= (0x1 << 23); // new note flag
+				word |= (0x1 << 24); // new note flag
 				if (noteTriggerData[t][tick]) {
-					word |= (0x1 << 22); // dma stop flag
+					word |= (0x1 << 23); // dma stop flag
 				}
 
 				word |= (instrumentData[t][tick] << 10); // instrument table index
@@ -582,4 +582,51 @@ function onFileLoaded(err, data) {
 
 	console.log("Compressed track data:",compressedTracksSize,"bytes");
 
+
+	// write file
+	var outData = []
+	
+	for (var t=0;t<4;t++) {
+		for (var i=0;i<trackData[t].length;i++) {
+			outData.push((trackData[t][i] >> 24) & 0xFF);
+			outData.push((trackData[t][i] >> 16) & 0xFF);
+			outData.push((trackData[t][i] >> 8) & 0xFF);
+			outData.push((trackData[t][i]) & 0xFF);
+		}
+		outData.push(0xFF);
+		outData.push(0xFF);
+		outData.push(0xFF);
+		outData.push(0xFF);
+	}
+	outData.push(0xFF);
+	outData.push(0xFF);
+	outData.push(0xFF);
+	outData.push(0xFF);
+
+	for (var i=0;i<mod.instruments.length;i++) {
+		outData.push((mod.instruments[i].offset >> 24) & 0xff);
+		outData.push((mod.instruments[i].offset >> 16) & 0xff);
+		outData.push((mod.instruments[i].offset >> 8) & 0xff);
+		outData.push((mod.instruments[i].offset) & 0xff);	
+		
+		outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 24) & 0xff);
+		outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 16) & 0xff);
+		outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 8) & 0xff);
+		outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start)) & 0xff);	
+
+		outData.push((mod.instruments[i].length >> 9) & 0xff);
+		outData.push((mod.instruments[i].length >> 1) & 0xff);	
+		
+		outData.push((mod.instruments[i].loop.length >> 9) & 0xff);
+		outData.push((mod.instruments[i].loop.length >> 1) & 0xff);
+	}
+	outData.push(0xFF);
+	outData.push(0xFF);
+	outData.push(0xFF);
+	outData.push(0xFF);
+
+	fs.writeFile("converted.nmod",Buffer.concat([Buffer.from(outData),mod.sampleData]), (err) => {
+		if (err) throw err;
+		console.log("The file has been saved!");
+	});
 }

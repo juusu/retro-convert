@@ -1,6 +1,6 @@
 "use strict";
 
-var Module = require("./ptmod");
+var PtModule = require("./ptmod");
 var fs = require("fs");
 var _ = require("lodash");
 
@@ -24,7 +24,7 @@ function onFileLoaded(err, data) {
 	}
 	console.log("Loaded:",data.length,"bytes");
 
-	var mod = new Module(data);
+	var mod = new PtModule(data);
 
 	console.log("Title:",mod.title);
 
