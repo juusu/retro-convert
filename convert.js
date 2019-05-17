@@ -399,6 +399,12 @@ function onFileLoaded(err, data) {
 	// zip the note trigger, instrument, volume and period data for each channel
 	var trackData = [[],[],[],[]];
 
+	// nove the note trigger data one forward, sp we can set dma stop flag on the previous tick
+	for (var t=0;t<4;t++) {
+		var el = noteTriggerData[t].shift();
+		noteTriggerData[t].push(el);
+	}
+
 	for (var tick=0;tick<ticks;tick++){
 		for (var t=0;t<4;t++) {
 			
@@ -416,6 +422,9 @@ function onFileLoaded(err, data) {
 			}
 
 			else {
+				if (noteTriggerData[t][tick]) {
+					word |= (0x1 << 23); // dma stop flag
+				}
 				var periodChange = 0;
 				if (tick!=0) {
 					periodChange = periodData[t][tick] - periodData[t][tick-1];
@@ -424,7 +433,7 @@ function onFileLoaded(err, data) {
 					console.error("Invalid period change!");					
 					//process.exit(1);	
 				}
-				word |= periodChange & 0x00FF
+				word |= (periodChange & 0x00FF)
 				// no new note
 			}
 
