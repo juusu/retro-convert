@@ -399,11 +399,16 @@ function onFileLoaded(err, data) {
 	// zip the note trigger, instrument, volume and period data for each channel
 	var trackData = [[],[],[],[]];
 
+	var initDma = 0X0000;
 	// nove the note trigger data one forward, sp we can set dma stop flag on the previous tick
 	for (var t=0;t<4;t++) {
 		var el = noteTriggerData[t].shift();
+		if (el) {
+			initDma |= (0x1 << (3-t)); // the channels go backwards in the replayer ...
+		}
 		noteTriggerData[t].push(el);
 	}
+
 
 	for (var tick=0;tick<ticks;tick++){
 		for (var t=0;t<4;t++) {
@@ -604,13 +609,13 @@ function onFileLoaded(err, data) {
 		}
 		outData.push(0xFF);
 		outData.push(0xFF);
-		outData.push(0xFF);
-		outData.push(0xFF);
 	}
 	outData.push(0xFF);
 	outData.push(0xFF);
-	outData.push(0xFF);
-	outData.push(0xFF);
+
+	// Initial DMACAN value
+	outData.push(0x00);
+	outData.push(initDma);
 
 	for (var i=0;i<mod.instruments.length;i++) {
 		outData.push((mod.instruments[i].offset >> 24) & 0xff);
