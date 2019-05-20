@@ -636,8 +636,6 @@ function onFileLoaded(err, data) {
 	}
 	outData.push(0xFF);
 	outData.push(0xFF);
-	outData.push(0xFF);
-	outData.push(0xFF);
 
 	fs.writeFile("converted.nmod",Buffer.concat([Buffer.from(outData),mod.sampleData]), (err) => {
 		if (err) throw err;
