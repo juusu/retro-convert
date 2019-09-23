@@ -461,55 +461,33 @@ function onFileLoaded(err, data) {
 	// try to compress the tracks optimally
 	for (var t=0;t<4;t++) {
 
-		var matchSize=0;
-		var numMatches=0;
-
 		for (var i=0;i<trackData[t].length;i++) {
-
-			//console.log("i:",i);
+			for (var j=0;j<compressedTracks[t].length;j++) {
 			
-			var matches = [];
-			var matchLength = 0;
+				if (trackData[t][i] === compressedTracks[t][j]) {
 
-			// find initial matches for input token in sliding window
-			for (var j=Math.max(0,i-SLIDING_WINDOW_SIZE);j<i;j++) {
-				//console.log("j:",j);
-				if (trackData[t][j] == trackData[t][i]) {
-					matches.push(j);
-					matchLength = 1;
-				}
-			}
+					var matchOffset = 1
+					var matchLength = 1;
 
+					// check for control world
+					if (((compressedTracks[t][j+matchOffset]) >>> 30) === 3) {
+						var skip = (compressedTracks[t][j+matchOffset] & 0x3FFF8000) >>> 15;
+						var length = compressedTracks[t][j+matchOffset] & 0x7FFF;
 
-			// find the longest one
-			do {
-				var newMatches = []
+						matchOffset -= skip;
 
-				for (var m=0;m<matches.length;m++) {
-					if (trackData[t][matches[m]+matchLength] == trackData[t][i+matchLength]) {
-						newMatches.push(matches[m]);
+						var repeat = 0;
+
+						if (skip < length) {
+							repeat = length / skip;
+						}
 					}
+
+					
+					
 				}
-				if (newMatches.length > 0) {
-					matchLength++;
-					matches = newMatches;
-				}
-			} while (newMatches.length > 0);
-
-
-			if (matchLength > 1) {
-				var offset = i - matches[matches.length-1];
-				compressedTracks[t].push("MATCH "+ offset + "," + matchLength);
-				i+=matchLength-1;
-				matchSize+=matchLength;
-				numMatches++;
-			}
-
-			else {
-				compressedTracks[t].push(trackData[t][i]);
-			}
+			}		
 		}
-
 
 		console.log("Matches:",numMatches,"(avg match length)",matchSize/numMatches);
 	}
