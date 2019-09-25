@@ -11,13 +11,14 @@
 "use strict";
 
 var Module = require("./ptmod");
+var Compressor = require("./compressor");
 var fs = require("fs");
 var _ = require("lodash");
 
 const MAX_PERIOD=907;
 const MIN_PERIOD=108;
 
-const SLIDING_WINDOW_SIZE = 30000;
+const SLIDING_WINDOW_SIZE = 2124;
 
 if (process.argv.length<3) {
 	console.error("Usage: node",process.argv[1],"<mod_filename>");
@@ -40,6 +41,7 @@ var vibratoTable = [
 	-255,-253,-250,-244,-235,-224,-212,-197,
 	-180,-161,-141,-120,- 97,- 74,- 49,- 24	 
 ];
+
 
 function onFileLoaded(err, data) {
 	if (err) {
@@ -455,56 +457,28 @@ function onFileLoaded(err, data) {
 
 	console.log("Uncompressed track data:",uncompressedTracksSize,"bytes\n");
 
-	var compressedTracks = [[],[],[],[]];
+	var compressedTracks = Compressor.compressLz(trackData,SLIDING_WINDOW_SIZE);
+	var decompressedTracks = Compressor.decompressLz(compressedTracks);
 
-	console.log("\nOPTIMAL COMPRESSION REPORT\n--------------------------");
-	// try to compress the tracks optimally
-	for (var t=0;t<4;t++) {
+	if (_.isEqual(trackData,decompressedTracks)) {
+		console.log("\nDecompression test PASSED!\n-----------------------------");
+	}
+	else {
+		console.log("\nDecompression test FAILED!\n-----------------------------");
 
-		for (var i=0;i<trackData[t].length;i++) {
-			for (var j=0;j<compressedTracks[t].length;j++) {
-			
-				if (trackData[t][i] === compressedTracks[t][j]) {
-
-					var matchOffset = 1
-					var matchLength = 1;
-
-					// check for control world
-					if (((compressedTracks[t][j+matchOffset]) >>> 30) === 3) {
-						var skip = (compressedTracks[t][j+matchOffset] & 0x3FFF8000) >>> 15;
-						var length = compressedTracks[t][j+matchOffset] & 0x7FFF;
-
-						matchOffset -= skip;
-
-						var repeat = 0;
-
-						if (skip < length) {
-							repeat = length / skip;
-						}
-					}
-
-					
-					
-				}
-			}		
-		}
-
-		console.log("Matches:",numMatches,"(avg match length)",matchSize/numMatches);
+		console.log("Original data:");
+		Compressor.logDebug(trackData[0],40);
+		console.log("Compressed data:");
+		Compressor.logDebug(compressedTracks[0],40);
+		console.log("Decompressed data:");
+		Compressor.logDebug(decompressedTracks[0],40);
 	}
 
-	var compressedTracksSize = 0;
-
-	for (var t=0;t<4;t++) {
-		console.log("Track",t,"compressed length:",compressedTracks[t].length*4,"bytes");
-		compressedTracksSize+=compressedTracks[t].length*4;
-	}
-
-	console.log("Compressed track data:",compressedTracksSize,"bytes");
-
+	var compressedTracks2 = Compressor.compressBufferless(trackData,256);
+	
 	var compressedTracks = [[],[],[],[]];
-
+    
 	console.log("\nBUFFERLESS COMPRESSION REPORT\n-----------------------------");
-
 	// try to compress the tracks bufferless
 	for (var t=0;t<4;t++) {
 
@@ -512,6 +486,7 @@ function onFileLoaded(err, data) {
 		var numMatches=0;
 
 		for (var i=0;i<trackData[t].length;i++) {
+
 			// find longest match in compressed data
 			var longestMatch = {
 				index: 0,
@@ -546,7 +521,9 @@ function onFileLoaded(err, data) {
 			if (longestMatch.length > 1) {
 
 				//console.log("MATCH:",i,":",longestMatch.index,longestMatch.length);
-
+				if (numMatches < 5) {
+					console.log("MATCH @",i,"- offset:",compressedTracks[t].length - longestMatch.index,"length:",longestMatch.length)
+				}
 				var controlWord = 0xFFFFFFFF
 				compressedTracks[t].push(controlWord);
 				i+=longestMatch.length-1;
@@ -573,7 +550,6 @@ function onFileLoaded(err, data) {
 	}
 
 	console.log("Compressed track data:",compressedTracksSize,"bytes");
-
 
 	// write file
 	var outData = []
