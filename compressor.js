@@ -4,8 +4,6 @@ class Compressor {
 
     static compressLz(trackData, lookbackBufferSize) {
 
-        console.log("\nLZ COMPRESSION REPORT\n--------------------------");
-        
         var compressedTracks = [[],[],[],[]];
 
         // go through each track
@@ -47,11 +45,6 @@ class Compressor {
     
                 if (matchLength > 1) {
                     var offset = i - matches[matches.length-1];
-                
-                    // DEBUG OUTPUT
-                    if (numMatches < 5) {
-                        console.log("MATCH @",i,"- offset:",offset,"length:",matchLength)
-                    }
 
                     compressedTracks[t].push(util.createControlWord(offset, matchLength));
 
@@ -225,18 +218,23 @@ class Compressor {
             console.log("Matches:",numMatches,"(avg match length)",totalMatchLength/numMatches,"max recursion depth:",maxRecursionDepth);
         }
     
-        var compressedTracksSize = 0;
-    
-        for (var t=0;t<4;t++) {
-            console.log("Track",t,"compressed length:",compressedTracks[t].length*4,"bytes");
-            compressedTracksSize+=compressedTracks[t].length*4;
-        }
-    
-        console.log("Compressed track data:",compressedTracksSize,"bytes");
+
 
         return compressedTracks;
     }
 
+    static getTrackDataSize(data) {
+        
+        var tracksSize = 0;
+    
+        for (var t=0;t<4;t++) {
+            console.log("Track",t,"compressed length:",data[t].length*4,"bytes");
+            tracksSize+=data[t].length*4;
+        }
+    
+        return tracksSize;
+    }
+    
     static logDebug(data, maxSize) {
         for (var i=0;i<maxSize && i<data.length;i++) {
             if (((data[i]) >>> 30) === 3) {
