@@ -40,7 +40,6 @@ var vibratoTable = [
 	-180,-161,-141,-120,- 97,- 74,- 49,- 24	 
 ];
 
-
 function onFileLoaded(err, data) {
 	if (err) {
 		console.log(err.message);
@@ -177,6 +176,7 @@ function onFileLoaded(err, data) {
 											noteTriggerData[t].push.apply(noteTriggerData[t],_.times(Math.min(delay-1,vBlankSpeed-step*delay-1), _.constant(false)));
 											instrumentData[t].push.apply(instrumentData[t],_.times(Math.min(delay-1,vBlankSpeed-step*delay-1), _.constant(0)));
 									}
+									break;
 								default:
 									noteTriggerData[t].push(true);
 									instrumentData[t].push(trackInstrumentNumber[t]);
@@ -498,9 +498,9 @@ function onFileLoaded(err, data) {
 	var lowerBound = 0;
 
 	do {
-		console.log("Current sliding window size:", slidingWindowSize, "(", slidingWindowSize*16,"bytes )");
-
 		console.log("\nLZ pass", pass,"\n------")
+		console.log("Current sliding window size:", lowerBound, "<", slidingWindowSize, "<", upperBound, "(", slidingWindowSize*16,"bytes )");
+
 		var compressedTracks = Compressor.compressLz(trackData,slidingWindowSize);
 		var decompressedTracks = Compressor.decompressLz(compressedTracks);
 	
@@ -538,6 +538,32 @@ function onFileLoaded(err, data) {
 
 		pass=pass+1;
 	} while (upperBound - lowerBound > 1)
+
+	console.log ("\nFinal LZ pass\n------");
+	console.log ("Optimal sliding window size is:",upperBound);
+	// compress again with the optimal window size because it might not be the last pass
+	var compressedTracks = Compressor.compressLz(trackData,upperBound);
+	var decompressedTracks = Compressor.decompressLz(compressedTracks);
+	
+	if (_.isEqual(trackData,decompressedTracks)) {
+		console.log("OK!");
+	}
+	else {
+		console.log("\n(De)compression verification error!\n-----------------------------");
+
+		console.log("Original data:");
+		Compressor.logDebug(trackData[0],40);
+		console.log("Compressed data:");
+		Compressor.logDebug(compressedTracks[0],40);
+		console.log("Decompressed data:");
+		Compressor.logDebug(decompressedTracks[0],40);
+	}
+
+	trackDataSize = Compressor.getTrackDataSize(compressedTracks);
+	console.log ("Final track data size:",trackDataSize)
+
+	var newTotalSize = trackDataSize+(upperBound*16);
+	console.log("Track data + decompression buffer:",newTotalSize);
 
 	// write file
 	var outData = []
