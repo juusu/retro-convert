@@ -228,7 +228,6 @@ class Compressor {
         var tracksSize = 0;
     
         for (var t=0;t<4;t++) {
-            console.log("Track",t,"compressed length:",data[t].length*4,"bytes");
             tracksSize+=data[t].length*4;
         }
     

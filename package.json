@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "buffer-splice": "^1.0.0",
-    "lodash": "^4.17.5"
+    "lodash": "^4.17.5",
+    "yargs": "^15.1.0"
   }
 }
