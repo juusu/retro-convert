@@ -230,22 +230,27 @@ function onFileLoaded(err, data) {
 				switch (row.command) {
 					// todo: 0 command
 					case 0x0:
-						var arpOffsets = [ 
-							0,
-							(row.parameter & 0xF0) >>> 4,
-						    row.parameter & 0x0F
-						];
-						for (var step=0;step<vBlankSpeed;step++) {
-							var arpStep = step % 3;
-							switch (arpStep) {
-								case 0:
-									periodData[t].push(trackPeriod[t]);
-									break;
-								default:
-									periodData[t].push(
-										periodTable.indexOf(periodTable.find(function(period) { return period >= trackPeriod[t]})) + arpOffsets[arpStep]
-									)
+						if (row.parameter != 0x00) {
+							var arpOffsets = [ 
+								0,
+								(row.parameter & 0xF0) >>> 4,
+								row.parameter & 0x0F
+							];
+							for (var step=0;step<vBlankSpeed;step++) {
+								var arpStep = step % 3;
+								switch (arpStep) {
+									case 0:
+										periodData[t].push(trackPeriod[t]);
+										break;
+									default:
+										periodData[t].push(
+											periodTable[periodTable.indexOf(periodTable.find(function(period) { return period <= trackPeriod[t]})) + arpOffsets[arpStep]]
+										)
+								}
 							}
+						}
+						else {
+							periodData[t].push.apply(periodData[t],_.times(vBlankSpeed, _.constant(trackPeriod[t])));	
 						}
 						break;
 					case 0x1:
