@@ -205,8 +205,10 @@ function onFileLoaded(err, data) {
 				}
 				// no new note
 				else {
-					noteTriggerData[t].push.apply(noteTriggerData[t],_.times(vBlankSpeed, _.constant(0)));
-					instrumentData[t].push(instrumentChange ? trackInstrumentNumber[t] : 0);
+					noteTriggerData[t].push.apply(noteTriggerData[t],_.times(vBlankSpeed, _.constant(false)));
+					if (vBlankSpeed > 0) {
+						instrumentData[t].push(instrumentChange ? trackInstrumentNumber[t] : 0);
+					}
 					instrumentData[t].push.apply(instrumentData[t],_.times(Math.max(0,vBlankSpeed-1), _.constant(0)));					
 				}
 			}
@@ -495,7 +497,8 @@ function onFileLoaded(err, data) {
 		// try to find optimal buffer size for LZ compression
 		// absolute upper bound is the size of original pattern data
 
-		var slidingWindowSize = mod.patterns.length * 64;
+		//var slidingWindowSize = mod.patterns.length * 64;
+		var slidingWindowSize = ticks;
 		console.log("Absolute upper bound on sliding window size:", slidingWindowSize, "(", slidingWindowSize*16,"bytes )");
 
 		console.log("LZ pass 1")
