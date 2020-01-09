@@ -387,7 +387,7 @@ function onFileLoaded(err, data) {
 								}
 								break;
 							default:
-								volumeData[t].push.apply(volumeData[t],_.times(vBlankSpeed,trackVolume[t]));
+								volumeData[t].push.apply(volumeData[t],_.times(vBlankSpeed,_.constant(trackVolume[t])));
 						}
 						break;
 					case 0xC:
@@ -454,6 +454,11 @@ function onFileLoaded(err, data) {
 			var word = 0x00000000;
 			word |= ((volumeData[t][tick] << 25) >>> 0);
 
+			var periodChange = 0;
+			if (tick!=0) {
+				periodChange = periodData[t][tick] - periodData[t][tick-1];
+			}
+
 			if ((instrumentData[t][tick]!=0) || ((periodChange < -128) || (periodChange > 127))) {
 				word |= (0x1 << 24); // new note flag
 				if (noteTriggerData[t][tick]) {
@@ -468,10 +473,7 @@ function onFileLoaded(err, data) {
 				if (noteTriggerData[t][tick]) {
 					word |= (0x1 << 23); // dma stop flag
 				}
-				var periodChange = 0;
-				if (tick!=0) {
-					periodChange = periodData[t][tick] - periodData[t][tick-1];
-				}
+
 				if ((periodChange < -128) || (periodChange > 127)) {
 					console.error("Invalid period change!");					
 					//process.exit(1);	
