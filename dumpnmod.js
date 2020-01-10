@@ -214,7 +214,7 @@ function onFileLoaded(err, data) {
 
                     do {
                         periodIndex = periodTable[finetune++].indexOf(tracks[tick][track] & 0x3FF);
-                    } while ((periodIndex == -1) && (finetune < 15))
+                    } while ((periodIndex == -1) && (finetune < 16))
 
                     finetune--;
 
