@@ -170,9 +170,11 @@ class Instrument {
 			console.error("Invalid finetune value",this.finetune,"for instrument",this.number);
 		    process.exit(1);
 		}
+		/* leave it as 2's complement - it's more useful as index for lookup in the periodtable that way
 		if (this.finetune > 7) {
 			this.finetune -= 16;
 		}
+		*/
 		this.volume = data.readUInt8(25);
 		if (this.volume > 64) {
 			console.error("Invalid volume",this.volume,"for instrument",this.number);
