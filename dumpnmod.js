@@ -190,6 +190,8 @@ function onFileLoaded(err, data) {
             console.log("Loop length:",instruments[instrument].loopLength);
         }
 
+        console.log('\n\nPattern data:\n-------------\n');
+
         for (var tick=0;tick<tracks.length;tick++) {
             
             if ((tick > 0) && (tick / yargs.speed) % 64 == 0) {
@@ -262,7 +264,3 @@ function onFileLoaded(err, data) {
         }
         console.log("Done");
     }
-
-// tr 0: 0
-// marker 0: 23680
-// tr 1: 23682
