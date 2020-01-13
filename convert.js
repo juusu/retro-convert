@@ -170,11 +170,17 @@ function onFileLoaded(err, data) {
 	var removedSamples = 0;
 	var sampleBytesSaved = 0;
 
+	var instrumentMap = [];
+	var currentInstrument = 0;
+
 	for (var i=0;i<mod.instruments.length;i++) {
 		if (mod.instruments[i].length > 0) {
 			if (!usedInstruments.has(mod.instruments[i].number)) {
 				sampleBytesSaved += mod.killInstrument(mod.instruments[i].number);
 				removedSamples++;
+			}
+			else {
+				instrumentMap[i] = currentInstrument++;
 			}
 		}
 	}
@@ -558,7 +564,7 @@ function onFileLoaded(err, data) {
 					word |= (0x1 << 23); // dma stop flag
 				}
 
-				word |= (instrumentData[t][tick] << 10); // instrument table index
+				word |= (instrumentMap[instrumentData[t][tick]] << 10); // instrument table index
 				word |= (periodData[t][tick] & 0x03FF); // period
 			}
 
@@ -701,6 +707,10 @@ function onFileLoaded(err, data) {
 	
 	// write file
 	var outData = []
+
+	if (yargs.compress) {
+		trackData = compressedTracks;
+	}
 	
 	for (var t=0;t<4;t++) {
 		for (var i=0;i<trackData[t].length;i++) {
@@ -720,24 +730,42 @@ function onFileLoaded(err, data) {
 	outData.push(initDma);
 
 	for (var i=0;i<mod.instruments.length;i++) {
-		outData.push((mod.instruments[i].offset >> 24) & 0xff);
-		outData.push((mod.instruments[i].offset >> 16) & 0xff);
-		outData.push((mod.instruments[i].offset >> 8) & 0xff);
-		outData.push((mod.instruments[i].offset) & 0xff);	
-		
-		outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 24) & 0xff);
-		outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 16) & 0xff);
-		outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 8) & 0xff);
-		outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start)) & 0xff);	
+		if (usedInstruments.has(i+1)) {
+			outData.push((mod.instruments[i].offset >> 24) & 0xff);
+			outData.push((mod.instruments[i].offset >> 16) & 0xff);
+			outData.push((mod.instruments[i].offset >> 8) & 0xff);
+			outData.push((mod.instruments[i].offset) & 0xff);	
+			
+			outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 24) & 0xff);
+			outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 16) & 0xff);
+			outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start) >> 8) & 0xff);
+			outData.push(((mod.instruments[i].offset + mod.instruments[i].loop.start)) & 0xff);	
 
-		outData.push((mod.instruments[i].length >> 9) & 0xff);
-		outData.push((mod.instruments[i].length >> 1) & 0xff);	
-		
-		outData.push((mod.instruments[i].loop.length >> 9) & 0xff);
-		outData.push((mod.instruments[i].loop.length >> 1) & 0xff);
+			outData.push((mod.instruments[i].length >> 9) & 0xff);
+			outData.push((mod.instruments[i].length >> 1) & 0xff);	
+			
+			outData.push((mod.instruments[i].loop.length >> 9) & 0xff);
+			outData.push((mod.instruments[i].loop.length >> 1) & 0xff);
+		}
 	}
 	outData.push(0xFF);
 	outData.push(0xFF);
+
+	// add the decompression buffer
+	if (yargs.compress) {
+		for (var t=0;t<4;t++) {
+			outData.push((upperBound >> 24) & 0xff);
+			outData.push((upperBound >> 16) & 0xff);
+			outData.push((upperBound >> 8) & 0xff);
+			outData.push((upperBound) & 0xff);
+			for (var i=1;i<upperBound;i++) {
+				outData.push(0x00);
+				outData.push(0x00);
+				outData.push(0x00);
+				outData.push(0x00);
+			}
+		}
+	}
 
 	fs.writeFile("converted.nmod",Buffer.concat([Buffer.from(outData),mod.sampleData]), (err) => {
 		if (err) throw err;
