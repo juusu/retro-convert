@@ -751,29 +751,24 @@ function onFileLoaded(err, data) {
 	outData.push(0xFF);
 	outData.push(0xFF);
 
-	var outBuf = Buffer.concat([Buffer.from(outData),mod.sampleData]);
-
 	// add the decompression buffer
 	if (yargs.compress) {
 
-		var decompressionBuffer = [];
-
 		for (var t=0;t<4;t++) {
-			decompressionBuffer.push((upperBound >> 24) & 0xff);
-			decompressionBuffer.push((upperBound >> 16) & 0xff);
-			decompressionBuffer.push((upperBound >> 8) & 0xff);
-			decompressionBuffer.push((upperBound) & 0xff);
+			outData.push((upperBound >> 8) & 0xff);
+			outData.push((upperBound) & 0xff);
+			outData.push(0x00);
+			outData.push(0x00);			
 			for (var i=1;i<upperBound;i++) {
-				decompressionBuffer.push(0x00);
-				decompressionBuffer.push(0x00);
-				decompressionBuffer.push(0x00);
-				decompressionBuffer.push(0x00);
+				outData.push(0x00);
+				outData.push(0x00);
+				outData.push(0x00);
+				outData.push(0x00);
 			}
 		}
-		outBuf = Buffer.concat([outBuf,Buffer.from(decompressionBuffer)]);
 	}
 
-	fs.writeFile("converted.nmod",outBuf, (err) => {
+	fs.writeFile("converted.nmod",Buffer.concat([Buffer.from(outData),mod.sampleData]), (err) => {
 		if (err) throw err;
 		console.log("The file has been saved!");
 	});
