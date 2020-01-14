@@ -76,4 +76,22 @@ struct sample_pointers {
 
 int mark = 0xFFFF; // this marker marks the end of sample pointers
 
-char[] sample_data; // uncompressed 8 bit sample data
+// optional decompression buffer for channel data
+// should match the number of channels which have track data (above)
+int bufferLength; // length of decompression buffer for ch0 in longwords, 
+                   // will get overwriten as part of buffer after player init
+long [bufferLength-1]; rest of ch0 buffer, zero filled
+
+int bufferLength; // length of decompression buffer for ch1 in longwords, 
+                   // will get overwriten as part of buffer after player init
+long [bufferLength-1]; rest of ch1 buffer, zero filled
+
+int bufferLength; // length of decompression buffer for ch2 in longwords, 
+                   // will get overwriten as part of buffer after player init
+long [bufferLength-1]; rest of ch2 buffer, zero filled
+
+int bufferLength; // length of decompression buffer for ch3 in longwords, 
+                   // will get overwriten as part of buffer after player init
+long [bufferLength-1]; rest of ch3 buffer, zero filled
+
+char[] sample_data; // uncompressed 8 bit sample data MUST begin with two zero bytes
