@@ -393,7 +393,7 @@ function onFileLoaded(err, data) {
 						}
 						break;
 					case 0x4:
-						var speed = (row.parameter & 0xF0) >>> 2;
+						var speed = (row.parameter & 0xF0) >>> 4;
 						var depth = row.parameter & 0x0F;
 
 						if (speed!=0) {
@@ -406,10 +406,10 @@ function onFileLoaded(err, data) {
 					case 0x6:
 						periodData[t].push(trackPeriod[t]);
 						for (var step=0;step<vBlankSpeed-1;step++) {
-							periodData[t].push(trackPeriod[t] + Math.floor(vibratoTable[Math.floor(trackVibrato[t].position / 4)] * trackVibrato[t].depth / 128));
+							periodData[t].push(trackPeriod[t] + Math.floor(vibratoTable[trackVibrato[t].position] * trackVibrato[t].depth / 128));
 							trackVibrato[t].position += trackVibrato[t].speed;
-							if (trackVibrato[t].position >= 256) {
-								trackVibrato[t].position -= 256;
+							if (trackVibrato[t].position > 63) {
+								trackVibrato[t].position -= 64;
 							}
 						}
 						break;
