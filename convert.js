@@ -717,16 +717,43 @@ function onFileLoaded(err, data) {
 	if (yargs.compress) {
 		trackData = compressedTracks;
 	}
+
+	console.log("\nREPORT\n______");
+	console.log("Original mod size:" + data.length);
 	
+	var trackDataLength = trackData[0].length * 4 + trackData[1].length * 4 + trackData[2].length * 4 + trackData[3].length * 4;
+	console.log("Track data length:", trackDataLength);
+
+	var instrumentDataLength = usedInstruments.size * 12;
+	console.log("Instrument data length:", instrumentDataLength);
+
+	var decompressionBufferLength = bufferSizes[0] * 4 + bufferSizes[1] * 4 + bufferSizes[2] * 4 + bufferSizes[3] * 4;
+	console.log("Decompression buffer length:", decompressionBufferLength);
+
+	var sampleDataLength = mod.sampleData.length;
+	console.log("Sample data length:", sampleDataLength);
+
+	var metaDataLength = 12;
+	console.log("Meta data length:", metaDataLength);
+
+	console.log("Final file length:", trackDataLength + instrumentDataLength + decompressionBufferLength + sampleDataLength + metaDataLength);
+
 	for (var t=0;t<4;t++) {
+
+		var wordSet = new Set();
+		
 		for (var i=0;i<trackData[t].length;i++) {
 			outData.push((trackData[t][i] >> 24) & 0xFF);
 			outData.push((trackData[t][i] >> 16) & 0xFF);
 			outData.push((trackData[t][i] >> 8) & 0xFF);
 			outData.push((trackData[t][i]) & 0xFF);
+
+			wordSet.add(trackData[t][i]);
 		}
 		outData.push(0xFF);
 		outData.push(0xFF);
+
+		console.log ("Track",t,"has",wordSet.size,"different values.");
 	}
 	outData.push(0xFF);
 	outData.push(0xFF);
