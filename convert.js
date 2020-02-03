@@ -718,22 +718,28 @@ function onFileLoaded(err, data) {
 		trackData = compressedTracks;
 	}
 
-	console.log("\nREPORT\n______");
-	console.log("Original mod size:" + data.length);
+	console.log("\nREPORT\n------");
+	console.log("Original mod size:",data.length);
 	
+	for (var t=0;t<4;t++) {
+		console.log("Track",t,"data length:",trackData[t].length*4);
+	}
 	var trackDataLength = trackData[0].length * 4 + trackData[1].length * 4 + trackData[2].length * 4 + trackData[3].length * 4;
-	console.log("Track data length:", trackDataLength);
+	console.log("Total track data length:", trackDataLength);
 
 	var instrumentDataLength = usedInstruments.size * 12;
 	console.log("Instrument data length:", instrumentDataLength);
 
+	for (var t=0;t<4;t++) {
+		console.log("Track",t,"decompression buffer length:",bufferSizes[t]*4);
+	}
 	var decompressionBufferLength = bufferSizes[0] * 4 + bufferSizes[1] * 4 + bufferSizes[2] * 4 + bufferSizes[3] * 4;
 	console.log("Decompression buffer length:", decompressionBufferLength);
 
 	var sampleDataLength = mod.sampleData.length;
 	console.log("Sample data length:", sampleDataLength);
 
-	var metaDataLength = 12;
+	var metaDataLength = 14;
 	console.log("Meta data length:", metaDataLength);
 
 	console.log("Final file length:", trackDataLength + instrumentDataLength + decompressionBufferLength + sampleDataLength + metaDataLength);
@@ -758,7 +764,7 @@ function onFileLoaded(err, data) {
 	outData.push(0xFF);
 	outData.push(0xFF);
 
-	// Initial DMACAN value
+	// Initial DMACON value
 	outData.push(0x00);
 	outData.push(initDma);
 
