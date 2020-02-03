@@ -594,115 +594,121 @@ function onFileLoaded(err, data) {
 
 	console.log("Uncompressed track data:",uncompressedTracksSize,"bytes\n");
 
+	var bufferSizes = [];
+
 	if (yargs.compress) {
 		// try to find optimal buffer size for LZ compression
 		// absolute upper bound is the size of original pattern data
+		var compressedTracks = [[],[],[],[]];
 
-		//var slidingWindowSize = mod.patterns.length * 64;
-		var slidingWindowSize = ticks;
-		console.log("Absolute upper bound on sliding window size:", slidingWindowSize, "(", slidingWindowSize*16,"bytes )");
+		for (var t=0;t<4;t++) {
+			//var slidingWindowSize = mod.patterns.length * 64;
+			var slidingWindowSize = ticks;
+			console.log("Absolute upper bound on sliding window size:", slidingWindowSize, "(", slidingWindowSize*4,"bytes )");
 
-		console.log("LZ pass 1")
-		var compressedTracks = Compressor.compressLz(trackData,slidingWindowSize);
-		var decompressedTracks = Compressor.decompressLz(compressedTracks);
+			console.log("\nLZ pass 1\n------");
+			compressedTracks[t] = Compressor.compressLz(trackData[t],slidingWindowSize);
+			var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
 
-		if (_.isEqual(trackData,decompressedTracks)) {
-			console.log("OK!");
-		}
-		else {
-			console.log("\n(De)compression verification error!\n-----------------------------");
-
-			console.log("Original data:");
-			Compressor.logDebug(trackData[0],40);
-			console.log("Compressed data:");
-			Compressor.logDebug(compressedTracks[0],40);
-			console.log("Decompressed data:");
-			Compressor.logDebug(decompressedTracks[0],40);
-		}
-
-		var trackDataSize = Compressor.getTrackDataSize(compressedTracks);
-		console.log("Compressed track data size:",trackDataSize,"bytes");
-		
-		var totalSize = trackDataSize+(slidingWindowSize*16);
-		console.log("Track data + decompression buffer:",totalSize);
-
-		var slidingWindowSize = Math.floor((slidingWindowSize * 16 - trackDataSize) / 16);
-
-		if (slidingWindowSize <= 0) {
-			console.error("ERROR: It's mot possible to compress pattern data to be smaller than the original for this mod!");
-			process.exit(1);
-		}
-
-		var pass = 2;
-
-		var upperBound = slidingWindowSize;
-		var lowerBound = 0;
-
-		do {
-			console.log("\nLZ pass", pass,"\n------")
-			console.log("Current sliding window size:", lowerBound, "<", slidingWindowSize, "<", upperBound, "(", slidingWindowSize*16,"bytes )");
-
-			var compressedTracks = Compressor.compressLz(trackData,slidingWindowSize);
-			var decompressedTracks = Compressor.decompressLz(compressedTracks);
-		
-			if (_.isEqual(trackData,decompressedTracks)) {
-				console.log("Compressed data verification OK!");
+			if (_.isEqual(trackData[t],decompressedTrack)) {
+				console.log("OK!");
 			}
 			else {
 				console.log("\n(De)compression verification error!\n-----------------------------");
-		
-				console.log("Original data:");
-				Compressor.logDebug(trackData[0],40);
-				console.log("Compressed data:");
-				Compressor.logDebug(compressedTracks[0],40);
-				console.log("Decompressed data:");
-				Compressor.logDebug(decompressedTracks[0],40);
-			}
-		
-			trackDataSize = Compressor.getTrackDataSize(compressedTracks);
-		
-			var newTotalSize = trackDataSize+(slidingWindowSize*16);
-			console.log("Track data + decompression buffer:",newTotalSize);
 
-			if (newTotalSize < totalSize) {
-				console.log("Smaller! - trying to reduce buffer further!");
-				upperBound = slidingWindowSize;
-				totalSize = newTotalSize;
-				slidingWindowSize = Math.floor(slidingWindowSize - ((upperBound - lowerBound) / 2));
+				console.log("Original data:");
+				Compressor.logDebug(trackData[t],40);
+				console.log("Compressed data:");
+				Compressor.logDebug(compressedTracks[t],40);
+				console.log("Decompressed data:");
+				Compressor.logDebug(decompressedTrack,40);
+			}
+
+			var trackDataSize = Compressor.getTrackDataSize(compressedTracks[t]);
+			console.log("Compressed track data size:",trackDataSize,"bytes");
+			
+			var totalSize = trackDataSize+(slidingWindowSize*4);
+			console.log("Track data + decompression buffer:",totalSize);
+
+			var slidingWindowSize = Math.floor((slidingWindowSize * 4 - trackDataSize) / 4);
+
+			if (slidingWindowSize <= 0) {
+				console.error("ERROR: It's mot possible to compress pattern data to be smaller than the original for this mod!");
+				process.exit(1);
+			}
+
+			var pass = 2;
+
+			var upperBound = slidingWindowSize;
+			var lowerBound = 0;
+
+			do {
+				console.log("\nLZ pass", pass,"\n------");
+				console.log("Current sliding window size:", lowerBound, "<", slidingWindowSize, "<", upperBound, "(", slidingWindowSize*16,"bytes )");
+
+				compressedTracks[t] = Compressor.compressLz(trackData[t],slidingWindowSize);
+				var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
+			
+				if (_.isEqual(trackData[t],decompressedTrack)) {
+					console.log("Compressed data verification OK!");
+				}
+				else {
+					console.log("\n(De)compression verification error!\n-----------------------------");
+			
+					console.log("Original data:");
+					Compressor.logDebug(trackData[t],40);
+					console.log("Compressed data:");
+					Compressor.logDebug(compressedTracks[t],40);
+					console.log("Decompressed data:");
+					Compressor.logDebug(decompressedTrack,40);
+				}
+			
+				trackDataSize = Compressor.getTrackDataSize(compressedTracks[t]);
+			
+				var newTotalSize = trackDataSize+(slidingWindowSize*4);
+				console.log("Track data + decompression buffer:",newTotalSize);
+
+				if (newTotalSize < totalSize) {
+					console.log("Smaller! - trying to reduce buffer further!");
+					upperBound = slidingWindowSize;
+					totalSize = newTotalSize;
+					slidingWindowSize = Math.floor(slidingWindowSize - ((upperBound - lowerBound) / 2));
+				}
+				else {
+					console.log("Bigger! - increasing buffer size!");
+					lowerBound = slidingWindowSize;
+					slidingWindowSize = Math.floor(slidingWindowSize + ((upperBound - lowerBound) / 2));
+				}
+
+				pass=pass+1;
+			} while (upperBound - lowerBound > 1)
+
+			console.log ("\nFinal LZ pass\n------");
+			console.log ("Optimal sliding window size is:",upperBound);
+			// compress again with the optimal window size because it might not be the last pass
+			compressedTracks[t] = Compressor.compressLz(trackData[t],upperBound);
+			var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
+			
+			if (_.isEqual(trackData[t],decompressedTrack)) {
+				console.log("OK!");
 			}
 			else {
-				console.log("Bigger! - increasing buffer size!");
-				lowerBound = slidingWindowSize;
-				slidingWindowSize = Math.floor(slidingWindowSize + ((upperBound - lowerBound) / 2));
+				console.log("\n(De)compression verification error!\n-----------------------------");
+
+				console.log("Original data:");
+				Compressor.logDebug(trackData[t],40);
+				console.log("Compressed data:");
+				Compressor.logDebug(compressedTracks[t],40);
+				console.log("Decompressed data:");
+				Compressor.logDebug(decompressedTrack,40);
 			}
 
-			pass=pass+1;
-		} while (upperBound - lowerBound > 1)
+			trackDataSize = Compressor.getTrackDataSize(compressedTracks);
 
-		console.log ("\nFinal LZ pass\n------");
-		console.log ("Optimal sliding window size is:",upperBound);
-		// compress again with the optimal window size because it might not be the last pass
-		var compressedTracks = Compressor.compressLz(trackData,upperBound);
-		var decompressedTracks = Compressor.decompressLz(compressedTracks);
-		
-		if (_.isEqual(trackData,decompressedTracks)) {
-			console.log("OK!");
+			var newTotalSize = trackDataSize+(upperBound*4);
+			console.log("Track data + decompression buffer:",newTotalSize);
+			bufferSizes.push(upperBound);
 		}
-		else {
-			console.log("\n(De)compression verification error!\n-----------------------------");
-
-			console.log("Original data:");
-			Compressor.logDebug(trackData[0],40);
-			console.log("Compressed data:");
-			Compressor.logDebug(compressedTracks[0],40);
-			console.log("Decompressed data:");
-			Compressor.logDebug(decompressedTracks[0],40);
-		}
-
-		trackDataSize = Compressor.getTrackDataSize(compressedTracks);
-
-		var newTotalSize = trackDataSize+(upperBound*16);
-		console.log("Track data + decompression buffer:",newTotalSize);
 	}
 	
 	// write file
@@ -755,11 +761,11 @@ function onFileLoaded(err, data) {
 	if (yargs.compress) {
 
 		for (var t=0;t<4;t++) {
-			outData.push((upperBound >> 8) & 0xff);
-			outData.push((upperBound) & 0xff);
+			outData.push((bufferSizes[t] >> 8) & 0xff);
+			outData.push((bufferSizes[t]) & 0xff);
 			outData.push(0x00);
 			outData.push(0x00);			
-			for (var i=1;i<upperBound;i++) {
+			for (var i=1;i<bufferSizes[t];i++) {
 				outData.push(0x00);
 				outData.push(0x00);
 				outData.push(0x00);
