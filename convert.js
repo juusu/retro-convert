@@ -226,7 +226,7 @@ function onFileLoaded(err, data) {
 							vBlankSpeed = row.parameter;
 						}
 						else {
-							//console.info("ignoring bpm tempo:",row.parameter);
+							console.info("ignoring bpm tempo:",row.parameter);
 						}
 						break;
 					case 0xD:
@@ -276,7 +276,7 @@ function onFileLoaded(err, data) {
 										instrumentData[t].push(trackInstrumentNumber[t]);
 									}
 									noteTriggerData[t].push.apply(noteTriggerData[t],_.times(Math.max(0,vBlankSpeed-delay-1), _.constant(false)));
-									instrumentData[t].push.apply(instrumentData[t],_.times(Math.min(0,vBlankSpeed-delay-1), _.constant(0)));
+									instrumentData[t].push.apply(instrumentData[t],_.times(Math.max(0,vBlankSpeed-delay-1), _.constant(0)));
 									break;
 								case 0x9:
 									var delay = row.parameter & 0x0F;
