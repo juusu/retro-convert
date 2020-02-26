@@ -468,14 +468,14 @@ function onFileLoaded(err, data) {
 								if (trackVolume[t]>64) {
 									trackVolume[t]=64;
 								}
-								volumeData[t].push.apply(volumeData[t],_.times(vBlankSpeed,trackVolume[t]));
+								volumeData[t].push.apply(volumeData[t],_.times(vBlankSpeed,_.constant(trackVolume[t])));
 								break;
 							case 0xB:
 								trackVolume[t]-=row.parameter & 0x0F;
 								if (trackVolume[t]<0) {
 									trackVolume[t]=0;
 								}
-								volumeData[t].push.apply(volumeData[t],_.times(vBlankSpeed,trackVolume[t]));
+								volumeData[t].push.apply(volumeData[t],_.times(vBlankSpeed,_.constant(trackVolume[t])));
 								break;							
 							case 0xC:
 								var delay = row.parameter & 0x0F;
