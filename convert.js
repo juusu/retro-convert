@@ -4,7 +4,6 @@
 // EEx command (pattern delay)
 // 7xx command
 // 9xx command
-// finetune
 
 "use strict";
 
