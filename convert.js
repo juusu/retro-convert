@@ -3,7 +3,6 @@
 // E5x & E6x (pattern loop) command
 // EEx command (pattern delay)
 // 7xx command
-// 9xx command
 
 "use strict";
 
@@ -204,6 +203,8 @@ function onFileLoaded(err, data) {
 	var portamentoSpeed=[0,0,0,0];
 	var trackVibrato=[{speed:0,depth:0,position:0},{speed:0,depth:0,position:0},{speed:0,depth:0,position:0},{speed:0,depth:0,position:0}];
 
+	var offsetInstruments = [{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}]
+
 	for (var p=0;p<mod.sequence.length;p++) {	
 		
 		var nextP = p+1;
@@ -293,6 +294,37 @@ function onFileLoaded(err, data) {
 									instrumentData[t].push.apply(instrumentData[t],_.times(Math.max(0,vBlankSpeed-1), _.constant(0)));
 							}
 							break;
+						case 0x9:
+							if (row.parameter != 0) {
+								if (_.isUndefined(offsetInstruments[trackInstrumentNumber[t]-1][row.parameter])) {
+									var offset = row.parameter << 8;
+									if (offset < mod.instruments[trackInstrumentNumber[t]-1].length) {
+										mod.instruments.push( {
+											offset: mod.instruments[trackInstrumentNumber[t]-1].offset + offset,
+											length: mod.instruments[trackInstrumentNumber[t]-1].length - offset,
+											loop: { 
+												start: mod.instruments[trackInstrumentNumber[t]-1].loop.start - offset,
+												length: mod.instruments[trackInstrumentNumber[t]-1].loop.length
+											},
+											finetune: mod.instruments[trackInstrumentNumber[t]-1].finetune
+										});
+									}
+									// handle sample offset past the end of the samnple
+									else {
+										mod.instruments.push( {
+											offset: mod.instruments[trackInstrumentNumber[t]-1].offset,
+											length: 2,
+											loop: mod.instruments[trackInstrumentNumber[t]-1].loop,
+											finetune: mod.instruments[trackInstrumentNumber[t]-1].finetune
+										});										
+									}
+									offsetInstruments[trackInstrumentNumber[t]-1][row.parameter] = mod.instruments.length;
+									usedInstruments.add(mod.instruments.length);
+									instrumentMap[mod.instruments.length] = usedInstruments.size;
+								}
+								trackInstrumentNumber[t] = offsetInstruments[trackInstrumentNumber[t]-1][row.parameter];
+							}
+							// no break - fall through the default case for the 9 command, too
 						default:
 							noteTriggerData[t].push(true);
 							instrumentData[t].push(trackInstrumentNumber[t]);
