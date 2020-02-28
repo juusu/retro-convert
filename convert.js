@@ -205,14 +205,31 @@ function onFileLoaded(err, data) {
 
 	var offsetInstruments = [{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}]
 
-	for (var p=0;p<mod.sequence.length;p++) {	
-		
-		var nextP = p+1;
+	var startRow = 0
+	var nextP = 0;
+	var loopCount = 0;
 
-		for (var r=0;r<64;r++) {
+	var visitedPositions = new Map();
+
+	for (var p=0;p<mod.sequence.length;p=nextP) {	
+		
+		nextP = p+1;
+
+		for (var r=startRow;r<64;r++) {
+
+			var currentPosition = JSON.stringify([p,r,loopCount]);
+
+			if (patternBreak && visitedPositions.has(currentPosition)) {
+				console.log("ERROR: Non-zero mod restart not supported! ( This mod loops from pattern",p,"row",r,")");
+				console.log("Restart from tick:", visitedPositions.get(currentPosition));
+				process.exit(1);
+			}
+			else {
+				visitedPositions.set(currentPosition, ticks);
+			}
 
 			var patternBreak = false;
-			var startRow = 0;
+			startRow = 0;
 
 			// pick up speed first
 			for (var t=0;t<4;t++) {
