@@ -1,6 +1,5 @@
 // TODO:
 //
-// E5x & E6x (pattern loop) command
 // EEx command (pattern delay)
 // 7xx command
 
@@ -611,7 +610,7 @@ function onFileLoaded(err, data) {
 		}
 
 		if (endSong) break;
-		
+
 	}
 
 	console.log("\nMusic duration:",ticks,"frames");
