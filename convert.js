@@ -208,8 +208,11 @@ function onFileLoaded(err, data) {
 	var startRow = 0
 	var nextP = 0;
 	var loopCount = 0;
+	var loopPos = 0;
 
 	var visitedPositions = new Map();
+
+	var endSong = false;
 
 	for (var p=0;p<mod.sequence.length;p=nextP) {	
 		
@@ -222,7 +225,8 @@ function onFileLoaded(err, data) {
 			if (patternBreak && visitedPositions.has(currentPosition)) {
 				console.log("ERROR: Non-zero mod restart not supported! ( This mod loops from pattern",p,"row",r,")");
 				console.log("Restart from tick:", visitedPositions.get(currentPosition));
-				process.exit(1);
+				endSong = true;
+				break;
 			}
 			else {
 				visitedPositions.set(currentPosition, ticks);
@@ -258,6 +262,34 @@ function onFileLoaded(err, data) {
 						patternBreak = true;
 						startRow = 0;
 						nextP = row.parameter;
+						break;
+					case 0xE:
+						switch ((row.parameter & 0xF0) >>> 4) {
+							case 0x6:
+								var count = row.parameter & 0x0F;
+								// set loop
+								if (count == 0) {
+									loopPos = r;
+								}
+								// loop back
+								else {
+									if (loopCount == 0) {
+										loopCount = count;
+										nextP = p;
+										startRow = loopPos;
+										patternBreak = true;
+									}
+									else {
+										loopCount--;
+										if (loopCount > 0) {
+											nextP = p;
+											startRow = loopPos;
+											patternBreak = true;
+										}
+									}
+								}
+								break;
+						}
 						break;
 				}
 			}
@@ -577,6 +609,9 @@ function onFileLoaded(err, data) {
 				break;
 			}
 		}
+
+		if (endSong) break;
+		
 	}
 
 	console.log("\nMusic duration:",ticks,"frames");
