@@ -210,6 +210,7 @@ function onFileLoaded(err, data) {
 	var loopPos = 0;
 
 	var visitedPositions = new Map();
+	var restartTick = 0;
 
 	var endSong = false;
 
@@ -225,6 +226,7 @@ function onFileLoaded(err, data) {
 				console.log("ERROR: Non-zero mod restart not supported! ( This mod loops from pattern",p,"row",r,")");
 				console.log("Restart from tick:", visitedPositions.get(currentPosition));
 				endSong = true;
+				restartTick = visitedPositions.get(currentPosition);
 				break;
 			}
 			else {
@@ -614,6 +616,7 @@ function onFileLoaded(err, data) {
 	}
 
 	console.log("\nMusic duration:",ticks,"frames");
+	console.log("\nRestart from tick:",restartTick);
 
 	// zip the note trigger, instrument, volume and period data for each channel
 	var trackData = [[],[],[],[]];
@@ -627,7 +630,6 @@ function onFileLoaded(err, data) {
 		}
 		noteTriggerData[t].push(el);
 	}
-
 
 	for (var tick=0;tick<ticks;tick++){
 		for (var t=0;t<4;t++) {
@@ -654,7 +656,7 @@ function onFileLoaded(err, data) {
 				if (noteTriggerData[t][tick]) {
 					word |= (0x1 << 23); // dma stop flag
 				}
-
+ 
 				if ((periodChange < -128) || (periodChange > 127)) {
 					console.error("Invalid period change!");					
 					//process.exit(1);	
@@ -676,12 +678,13 @@ function onFileLoaded(err, data) {
 
 	console.log("Uncompressed track data:",uncompressedTracksSize,"bytes\n");
 
-	var bufferSizes = [];
+	var restartPos = [];
 
 	if (yargs.compress) {
 		// try to find optimal buffer size for LZ compression
 		// absolute upper bound is the size of original pattern data
 		var compressedTracks = [[],[],[],[]];
+		var bufferSizes = [];
 
 		for (var t=0;t<4;t++) {
 			//var slidingWindowSize = mod.patterns.length * 64;
@@ -689,7 +692,12 @@ function onFileLoaded(err, data) {
 			console.log("Absolute upper bound on sliding window size:", slidingWindowSize, "(", slidingWindowSize*4,"bytes )");
 
 			console.log("\nLZ pass 1\n------");
-			compressedTracks[t] = Compressor.compressLz(trackData[t],slidingWindowSize);
+
+			var part1 = Compressor.compressLz(trackData[t].slice(0,restartTick),slidingWindowSize);
+			var part2 = Compressor.compressLz(trackData[t].slice(restartTick),slidingWindowSize);
+
+			compressedTracks[t] = part1.concat(part2);
+
 			var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
 
 			if (_.isEqual(trackData[t],decompressedTrack)) {
@@ -728,7 +736,11 @@ function onFileLoaded(err, data) {
 				console.log("\nLZ pass", pass,"\n------");
 				console.log("Current sliding window size:", lowerBound, "<", slidingWindowSize, "<", upperBound, "(", slidingWindowSize*16,"bytes )");
 
-				compressedTracks[t] = Compressor.compressLz(trackData[t],slidingWindowSize);
+				var part1 = Compressor.compressLz(trackData[t].slice(0,restartTick),slidingWindowSize);
+				var part2 = Compressor.compressLz(trackData[t].slice(restartTick),slidingWindowSize);
+
+				compressedTracks[t] = part1.concat(part2);
+
 				var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
 			
 				if (_.isEqual(trackData[t],decompressedTrack)) {
@@ -768,7 +780,13 @@ function onFileLoaded(err, data) {
 			console.log ("\nFinal LZ pass\n------");
 			console.log ("Optimal sliding window size is:",upperBound);
 			// compress again with the optimal window size because it might not be the last pass
-			compressedTracks[t] = Compressor.compressLz(trackData[t],upperBound);
+			var part1 = Compressor.compressLz(trackData[t].slice(0,restartTick),upperBound);
+			var part2 = Compressor.compressLz(trackData[t].slice(restartTick),upperBound);
+
+			compressedTracks[t] = part1.concat(part2);
+
+			restartPos[t] = part1.length;
+
 			var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
 			
 			if (_.isEqual(trackData[t],decompressedTrack)) {
@@ -842,7 +860,9 @@ function onFileLoaded(err, data) {
 		outData.push(0xFF);
 
 		console.log ("Track",t,"has",wordSet.size,"different values.");
+
 	}
+
 	outData.push(0xFF);
 	outData.push(0xFF);
 
@@ -869,6 +889,7 @@ function onFileLoaded(err, data) {
 			outData.push((mod.instruments[i].loop.length >> 1) & 0xff);
 		}
 	}
+
 	outData.push(0xFF);
 	outData.push(0xFF);
 
