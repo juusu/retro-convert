@@ -803,7 +803,7 @@ function onFileLoaded(err, data) {
 				Compressor.logDebug(decompressedTrack,40);
 			}
 
-			trackDataSize = Compressor.getTrackDataSize(compressedTracks);
+			trackDataSize = Compressor.getTrackDataSize(compressedTracks[t]);
 
 			var newTotalSize = trackDataSize+(upperBound*4);
 			console.log("Track data + decompression buffer:",newTotalSize);
