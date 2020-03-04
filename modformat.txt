@@ -53,15 +53,19 @@ s = size - number of music data words to read from the lookback before fetching 
 
 if offset < size then repeat the last offset words size / offset times
 
-int mark = 0xFFFF; // end channel 1 note data
+int mark = 0xFFFF; // end channel 0 note data
+long restartFrom; // restart offset for ch 0 (in longwords from pattern data start)
 
 // optional channels 1-3
 long[] data; // compressed note data for ch 1
 int mark = 0xFFFF;
+long restartFrom; // restart offset for ch 1 (in longwords from pattern data start)
 long[] data; // compressed note data for ch 2
 int mark = 0xFFFF;
+long restartFrom; // restart offset for ch 2 (in longwords from pattern data start)
 long[] data; // compressed note data for ch 3
 int mark = 0xFFFF;
+long restartFrom; // restart offset for ch 3 (in longwords from pattern data start)
 
 int mark = 0xFFFF; // second marker marks end of all note data
 
