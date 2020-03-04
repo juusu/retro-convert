@@ -57,7 +57,6 @@ class Compressor {
     
         var compressedTracksSize = 0;
     
-        console.log("Compressed length:",compressedTrack.length*4,"bytes");
         compressedTracksSize+=compressedTrack.length*4;
     
         console.log("Compressed track data:",compressedTracksSize,"bytes");
