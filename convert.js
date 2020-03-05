@@ -839,7 +839,7 @@ function onFileLoaded(err, data) {
 	var sampleDataLength = mod.sampleData.length;
 	console.log("Sample data length:", sampleDataLength);
 
-	var metaDataLength = 14;
+	var metaDataLength = 30;
 	console.log("Meta data length:", metaDataLength);
 
 	console.log("Final file length:", trackDataLength + instrumentDataLength + decompressionBufferLength + sampleDataLength + metaDataLength);
@@ -860,6 +860,12 @@ function onFileLoaded(err, data) {
 		outData.push(0xFF);
 
 		console.log ("Track",t,"has",wordSet.size,"different values.");
+
+		// restart pointer
+		outData.push((restartPos[t] >> 24) & 0xFF);
+		outData.push((restartPos[t] >> 16) & 0xFF);
+		outData.push((restartPos[t] >> 8) & 0xFF);
+		outData.push(restartPos[t] & 0xFF);
 
 	}
 
