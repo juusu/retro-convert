@@ -223,7 +223,7 @@ function onFileLoaded(err, data) {
 			var currentPosition = JSON.stringify([p,r,loopCount]);
 
 			if (patternBreak && visitedPositions.has(currentPosition)) {
-				console.log("ERROR: Non-zero mod restart not supported! ( This mod loops from pattern",p,"row",r,")");
+				console.log("Non-standard restart detected! This mod loops from pattern",p,"row",r,".");
 				console.log("Restart from tick:", visitedPositions.get(currentPosition));
 				endSong = true;
 				restartTick = visitedPositions.get(currentPosition);

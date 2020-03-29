@@ -3,3 +3,4 @@ node_modules/**
 *.mod
 *.nmod
 *.code-workspace
+*.rm
