@@ -15,6 +15,11 @@ const yargs = require("yargs")
 		default: true,
 		type: 'boolean'
 	})
+	.option('s', {
+		alias: 'samples',
+		default: true,
+		type: 'boolean'
+	})
 	.argv;
 
 const MAX_PERIOD=907;
@@ -833,16 +838,14 @@ function onFileLoaded(err, data) {
 	for (var t=0;t<4;t++) {
 		console.log("Track",t,"decompression buffer length:",bufferSizes[t]*4);
 	}
-	var decompressionBufferLength = bufferSizes[0] * 4 + bufferSizes[1] * 4 + bufferSizes[2] * 4 + bufferSizes[3] * 4;
-	console.log("Decompression buffer length:", decompressionBufferLength);
 
 	var sampleDataLength = mod.sampleData.length;
 	console.log("Sample data length:", sampleDataLength);
 
-	var metaDataLength = 30;
+	var metaDataLength = 38;
 	console.log("Meta data length:", metaDataLength);
 
-	console.log("Final file length:", trackDataLength + instrumentDataLength + decompressionBufferLength + sampleDataLength + metaDataLength);
+	console.log("Final file length:", trackDataLength + instrumentDataLength + sampleDataLength + metaDataLength);
 
 	for (var t=0;t<4;t++) {
 
@@ -899,24 +902,25 @@ function onFileLoaded(err, data) {
 	outData.push(0xFF);
 	outData.push(0xFF);
 
-	// add the decompression buffer
+	// add the decompression buffer sizes
 	if (yargs.compress) {
 
 		for (var t=0;t<4;t++) {
 			outData.push((bufferSizes[t] >> 8) & 0xff);
 			outData.push((bufferSizes[t]) & 0xff);
-			outData.push(0x00);
-			outData.push(0x00);			
-			for (var i=1;i<bufferSizes[t];i++) {
-				outData.push(0x00);
-				outData.push(0x00);
-				outData.push(0x00);
-				outData.push(0x00);
-			}
 		}
 	}
 
-	fs.writeFile("converted.nmod",Buffer.concat([Buffer.from(outData),mod.sampleData]), (err) => {
+	var finalBuffer;
+
+	if (yargs.samples) {
+		finalBuffer = Buffer.concat([Buffer.from(outData),mod.sampleData]);
+	}
+	else {
+		finalBuffer = Buffer.from(outData);
+	}
+
+	fs.writeFile("converted.nmod",finalBuffer, (err) => {
 		if (err) throw err;
 		console.log("The file has been saved!");
 	});
