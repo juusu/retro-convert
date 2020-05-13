@@ -9,6 +9,8 @@ const yargs = require("yargs")
         type: 'integer'
     })
     .argv;
+
+const Compressor = require("./src/compressor");
     
 if (yargs._.length!=1) {
     console.error("Usage: node",yargs.$0,"<nmod_filename>");
@@ -130,8 +132,45 @@ function onFileLoaded(err, data) {
         var offset = 0;
 
         var tracks = [];
+        var restartFrom = [];
 
-        var word = data.readUInt32BE(offset);
+        var endTracks = false;
+
+        do {
+
+            var endTrack = false;
+            var track = [];
+
+            do {
+                var word = data.readUInt32BE(offset);
+                
+                if (word < 0xffff0000) {
+                    track.push(word);
+                    offset+=4;
+                }
+                else {
+                    offset+=2;
+                    word = data.readUInt32BE(offset);
+                    restartFrom.push(word);
+                    offset+=4;
+                    endTrack = true;
+                    word = data.readUInt16BE(offset);
+                    if (word === 0xffff) {
+                        endTracks = true;
+                    }
+                }
+            } while (!endTrack);
+
+            track = Compressor.decompressLz(track);
+
+            _.remove(track, function(word) {
+                return (word >= 0xc0000000);
+            });
+
+            tracks.push(track);
+
+        } while (!endTracks);
+/*         var word = data.readUInt32BE(offset);
 
         while (word != 0xffffffff) {
 
@@ -146,7 +185,11 @@ function onFileLoaded(err, data) {
             
             tracks.push(track);
             offset += 2;
-        }
+
+            restartFrom.push(data.readUInt32BE(offset));
+            offset += 2;
+
+        } */
 
         tracks = _.zip.apply(_, tracks);
 
@@ -180,6 +223,11 @@ function onFileLoaded(err, data) {
         }
 
         offset += 2;
+ 
+        
+        // skip over the decompression buffer sizes
+        offset += (tracks[0].length * 2);
+
         var sampleData = data.slice(offset);
 
         for (var instrument=0;instrument<instruments.length;instrument++) {

@@ -191,7 +191,9 @@ class Converter {
 		var restartTick = 0;
 		
 		var currentBpm = 125;
-		var tempoChange = [];
+		var newBpm = currentBpm;
+		var bpm = [];
+		var numTempoChanges = 0
 
 	    var endSong = false;
 
@@ -225,11 +227,7 @@ class Converter {
 	                        // console.info("vblank tempo set to:",mod.sequence[p].tracks[t][r].parameter);
 	                        vBlankSpeed = row.parameter;
 	                    } else {
-	                        if (row.parameter !== currentBpm) {
-								uses.ciaTempo = true;
-								currentBpm = row.parameter;
-								tempoChange[ticks] = row.parameter;
-							}
+							newBpm = row.parameter;
 	                    }
 	                    break;
 	                case 0xD:
@@ -273,7 +271,17 @@ class Converter {
 	                    }
 	                    break;
 	                }
-	            }
+				}
+				
+				if (newBpm !== currentBpm) {
+					uses.ciaTempo = true;
+					currentBpm = newBpm;
+					if (ticks > 0) {
+						numTempoChanges++;
+					}
+				}
+
+				bpm.push.apply(bpm, _.times(vBlankSpeed, _.constant(currentBpm)));
 
 	            // note trigger & instrument data
 	            for (var t = 0; t < 4; t++) {
@@ -589,7 +597,7 @@ class Converter {
 	        if (endSong) break;
 		}
 		
-		if (_.compact(tempoChange).length > 0) {
+		if (numTempoChanges > 0) {
 			uses.ciaTempoChange = true;
 			console.log("\nSong changes CIA tempo!");
 		}
@@ -610,14 +618,17 @@ class Converter {
 	        noteTriggerData[t].push(el);
 	    }
 
+		currentBpm = bpm[0];
+
 	    for (var tick = 0; tick < ticks; tick++) {
 	        for (var t = 0; t < 4; t++) {
 
 				// interleave tempo changes in first track
-				if ((uses.ciaTempoChange) && (tempoChange[tick] !== undefined) && (t === 0)) {
+				if ((uses.ciaTempoChange) && (bpm[tick]!==currentBpm) && (t === 0)) {
 					var controlWord = 0xC0000000; // set control bits, command (set tempo = 0) and multiplier-1
-					controlWord |= (tempoChange[tick] & 0xFF); // set tempo
+					controlWord |= (bpm[tick] & 0xFF); // set tempo
 					trackData[t].push(controlWord);
+					currentBpm = bpm[tick];
 				}
 
 	            var word = 0x00000000;
@@ -650,7 +661,14 @@ class Converter {
 	            }
 	            trackData[t].push(word);
 	        }
-	    }
+		}
+		
+		// if tune changes tempo, reset tempo at end of track 0 to the restart tempo (if needed)
+		if (uses.ciaTempoChange && (bpm[restartTick] !== bpm[bpm.length-1])) {
+			var controlWord = 0xC0000000; // set control bits, command (set tempo = 0) and multiplier-1
+			controlWord |= (bpm[restartTick] & 0xFF); // set tempo
+			trackData[0].push(controlWord);
+		}
 
 	    var uncompressedTracksSize = 0;
 
@@ -853,7 +871,11 @@ class Converter {
 
 	    // Initial DMACON value
 	    outData.push(0x00);
-	    outData.push(initDma);
+		outData.push(initDma);
+		
+		// initial multiplier & tempo
+		outData.push(0x00);
+		outData.push(bpm[0]);
 
 	    for (var i = 0; i < mod.instruments.length; i++) {
 	        if (usedInstruments.has(i + 1)) {
