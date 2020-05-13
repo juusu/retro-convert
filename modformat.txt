@@ -49,9 +49,50 @@ ccooooooooooooooosssssssssssssss
 c = control bits, always 11
 
 o = offset - number of longwords to lookback for the next music data word
+ 
+    offset must be less than $7FFD or less, $7FFE and $7FFF will looks like the end of pattern data marker !
+
 s = size - number of music data words to read from the lookback before fetching next word from the current stream position
 
 if offset < size then repeat the last offset words size / offset times
+
+if offset == 0 then the low 15 bits are a player control command, not used for compression:
+
+cccpppppppppppp
+
+c = command (0-7)
+
+p = parameter
+
+-----------------------------------------------------
+
+COMMANDS:
+
+0 - set tempo
+    
+    hex: 0xyy 
+	
+	x+1 = speed multiplier
+        yy  = BPM (a 'la protracker)
+
+    yy == 00 stops playback
+
+1 - set LED filter
+
+    hex: 100x
+
+        x   = 0 - filter off, 1 - filter on
+
+2 - sync
+
+    used for syncing demo effects with music, protracker E8x and 8xx commands should be converted to this
+
+    hex: 2xyy
+
+	x    = sync channel
+        yy   = value to emit on sync channel
+
+-------------------------------------------
 
 int mark = 0xFFFF; // end channel 0 note data
 long restartFrom; // restart offset for ch 0 (in longwords from pattern data start)

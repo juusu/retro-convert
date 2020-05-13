@@ -123,6 +123,12 @@ class Converter {
 	];
 
 	static convert (mod, yargs) {
+
+		var uses = {
+			"ciaTempo": false,
+			"ciaTempoChange": false
+		}
+
 	    console.log("Original pattern data length", mod.patterns.length * 1024, "bytes");
 
 	    var usedInstruments = new Set();
@@ -182,7 +188,10 @@ class Converter {
 	    var loopPos = 0;
 
 	    var visitedPositions = new Map();
-	    var restartTick = 0;
+		var restartTick = 0;
+		
+		var currentBpm = 125;
+		var tempoChange = [];
 
 	    var endSong = false;
 
@@ -216,7 +225,11 @@ class Converter {
 	                        // console.info("vblank tempo set to:",mod.sequence[p].tracks[t][r].parameter);
 	                        vBlankSpeed = row.parameter;
 	                    } else {
-	                        console.info("ignoring bpm tempo:", row.parameter);
+	                        if (row.parameter !== currentBpm) {
+								uses.ciaTempo = true;
+								currentBpm = row.parameter;
+								tempoChange[ticks] = row.parameter;
+							}
 	                    }
 	                    break;
 	                case 0xD:
@@ -574,7 +587,12 @@ class Converter {
 	        }
 
 	        if (endSong) break;
-	    }
+		}
+		
+		if (_.compact(tempoChange).length > 0) {
+			uses.ciaTempoChange = true;
+			console.log("\nSong changes CIA tempo!");
+		}
 
 	    console.log("\nMusic duration:", ticks, "frames");
 	    console.log("\nRestart from tick:", restartTick);
@@ -594,6 +612,14 @@ class Converter {
 
 	    for (var tick = 0; tick < ticks; tick++) {
 	        for (var t = 0; t < 4; t++) {
+
+				// interleave tempo changes in first track
+				if ((uses.ciaTempoChange) && (tempoChange[tick] !== undefined) && (t === 0)) {
+					var controlWord = 0xC0000000; // set control bits, command (set tempo = 0) and multiplier-1
+					controlWord |= (tempoChange[tick] & 0xFF); // set tempo
+					trackData[t].push(controlWord);
+				}
+
 	            var word = 0x00000000;
 	            word |= ((volumeData[t][tick] << 25) >>> 0);
 

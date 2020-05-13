@@ -63,7 +63,8 @@ class Compressor {
         var decompressedTracks = [];
 
         for (var i = 0; i < compressedTrackData.length; i++) {
-            if (((compressedTrackData[i]) >>> 30) === 3) {
+            // offset === 0 is for player commands, output those verbatim
+            if ((((compressedTrackData[i]) >>> 30) === 3) && (((compressedTrackData[i] & 0x3FFF8000) >>> 15) !== 0)) {
                 var controlWord = util.parseControlWord(compressedTrackData[i]);
                 for (var j = 0; j < controlWord.length; j++) {
                     decompressedTracks.push(decompressedTracks[decompressedTracks.length - controlWord.offset]);
