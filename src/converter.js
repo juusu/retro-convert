@@ -1,6 +1,5 @@
 // TODO:
 //
-// EEx command (pattern delay)
 // 7xx command
 
 "use strict";
@@ -201,6 +200,9 @@ class Converter {
 	        nextP = p + 1;
 
 	        for (var r = startRow; r < 64; r++) {
+
+				var vBlankMultiplier = 1;
+
 	            var currentPosition = JSON.stringify([p, r, loopCount]);
 
 	            if (patternBreak && visitedPositions.has(currentPosition)) {
@@ -267,7 +269,10 @@ class Converter {
 	                                }
 	                            }
 	                        }
-	                        break;
+							break;
+						case 0xE:
+							vBlankMultiplier = (row.parameter & 0x0F) + 1;
+							break;
 	                    }
 	                    break;
 	                }
@@ -281,7 +286,7 @@ class Converter {
 					}
 				}
 
-				bpm.push.apply(bpm, _.times(vBlankSpeed, _.constant(currentBpm)));
+				bpm.push.apply(bpm, _.times(vBlankSpeed*vBlankMultiplier, _.constant(currentBpm)));
 
 	            // note trigger & instrument data
 	            for (var t = 0; t < 4; t++) {
@@ -299,37 +304,37 @@ class Converter {
 	                    switch (row.command) {
 	                    case 0x3:
 	                    case 0x5:
-	                        noteTriggerData[t].push.apply(noteTriggerData[t], _.times(vBlankSpeed, _.constant(false)));
+	                        noteTriggerData[t].push.apply(noteTriggerData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(false)));
 	                        instrumentData[t].push(instrumentChange ? trackInstrumentNumber[t] : 0);
-	                        instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed - 1), _.constant(0)));
+	                        instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
 	                        break;
 	                    case 0xE:
 	                        switch ((row.parameter & 0xF0) >>> 4) {
 	                        case 0xD:
 	                            var delay = row.parameter & 0x0F;
-	                            noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.min(delay, vBlankSpeed), _.constant(false)));
-	                            instrumentData[t].push.apply(instrumentData[t], _.times(Math.min(delay, vBlankSpeed), _.constant(0)));
+	                            noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.min(delay, vBlankSpeed*vBlankMultiplier), _.constant(false)));
+	                            instrumentData[t].push.apply(instrumentData[t], _.times(Math.min(delay, vBlankSpeed*vBlankMultiplier), _.constant(0)));
 	                            if (delay < vBlankSpeed) {
 	                                noteTriggerData[t].push(true);
 	                                instrumentData[t].push(trackInstrumentNumber[t]);
 	                            }
-	                            noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed - delay - 1), _.constant(false)));
-	                            instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed - delay - 1), _.constant(0)));
+	                            noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - delay - 1), _.constant(false)));
+	                            instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - delay - 1), _.constant(0)));
 	                            break;
 	                        case 0x9:
 	                            var delay = row.parameter & 0x0F;
 	                            for (var step = 0; step < vBlankSpeed / delay; step++) {
 	                                noteTriggerData[t].push(true);
 	                                instrumentData[t].push(trackInstrumentNumber[t]);
-	                                noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.min(delay - 1, vBlankSpeed - step * delay - 1), _.constant(false)));
-	                                instrumentData[t].push.apply(instrumentData[t], _.times(Math.min(delay - 1, vBlankSpeed - step * delay - 1), _.constant(0)));
+	                                noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.min(delay - 1, vBlankSpeed*vBlankMultiplier - step * delay - 1), _.constant(false)));
+	                                instrumentData[t].push.apply(instrumentData[t], _.times(Math.min(delay - 1, vBlankSpeed*vBlankMultiplier - step * delay - 1), _.constant(0)));
 	                            }
 	                            break;
 	                        default:
 	                            noteTriggerData[t].push(true);
 	                            instrumentData[t].push(trackInstrumentNumber[t]);
-	                            noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed - 1), _.constant(false)));
-	                            instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed - 1), _.constant(0)));
+	                            noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(false)));
+	                            instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
 	                        }
 	                        break;
 	                    case 0x9:
@@ -366,17 +371,17 @@ class Converter {
 	                    default:
 	                        noteTriggerData[t].push(true);
 	                        instrumentData[t].push(trackInstrumentNumber[t]);
-	                        noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed - 1), _.constant(false)));
-	                        instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed - 1), _.constant(0)));
+	                        noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(false)));
+	                        instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
 	                    }
 	                }
 	                // no new note
 	                else {
-	                    noteTriggerData[t].push.apply(noteTriggerData[t], _.times(vBlankSpeed, _.constant(false)));
+	                    noteTriggerData[t].push.apply(noteTriggerData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(false)));
 	                    if (vBlankSpeed > 0) {
 	                        instrumentData[t].push(instrumentChange ? trackInstrumentNumber[t] : 0);
 	                    }
-	                    instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed - 1), _.constant(0)));
+	                    instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
 	                }
 	            }
 
@@ -402,7 +407,7 @@ class Converter {
 	                            (row.parameter & 0xF0) >>> 4,
 	                            row.parameter & 0x0F
 	                        ];
-	                        for (var step = 0; step < vBlankSpeed; step++) {
+	                        for (var step = 0; step < vBlankSpeed*vBlankMultiplier; step++) {
 	                            var arpStep = step % 3;
 	                            switch (arpStep) {
 	                            case 0:
@@ -416,12 +421,12 @@ class Converter {
 	                            }
 	                        }
 	                    } else {
-	                        periodData[t].push.apply(periodData[t], _.times(vBlankSpeed, _.constant(trackPeriod[t])));
+	                        periodData[t].push.apply(periodData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(trackPeriod[t])));
 	                    }
 	                    break;
 	                case 0x1:
 	                    periodData[t].push(trackPeriod[t]);
-	                    for (var step = 0; step < vBlankSpeed - 1; step++) {
+	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        trackPeriod[t] -= row.parameter;
 	                        if (trackPeriod[t] < this.#MIN_PERIOD) {
 	                            trackPeriod[t] = this.#MIN_PERIOD;
@@ -431,7 +436,7 @@ class Converter {
 	                    break;
 	                case 0x2:
 	                    periodData[t].push(trackPeriod[t]);
-	                    for (var step = 0; step < vBlankSpeed - 1; step++) {
+	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        trackPeriod[t] += row.parameter;
 	                        if (trackPeriod[t] > this.#MAX_PERIOD) {
 	                            trackPeriod[t] = this.#MAX_PERIOD;
@@ -448,7 +453,7 @@ class Converter {
 	                    }
 	                case 0x5:
 	                    periodData[t].push(trackPeriod[t]);
-	                    for (var step = 0; step < vBlankSpeed - 1; step++) {
+	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        trackPeriod[t] += portamentoSpeed[t];
 	                        if ((portamentoSpeed[t] < 0) && (trackPeriod[t] < targetPeriod[t])) {
 	                            trackPeriod[t] = targetPeriod[t];
@@ -472,7 +477,7 @@ class Converter {
 	                    // no break, we do the same thing for 4 and 6 commands
 	                case 0x6:
 	                    periodData[t].push(trackPeriod[t]);
-	                    for (var step = 0; step < vBlankSpeed - 1; step++) {
+	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        periodData[t].push(trackPeriod[t] + Math.floor(this.#vibratoTable[trackVibrato[t].position] * trackVibrato[t].depth / 128));
 	                        trackVibrato[t].position += trackVibrato[t].speed;
 	                        if (trackVibrato[t].position > 63) {
@@ -496,7 +501,7 @@ class Converter {
 	                        break;
 	                    }
 	                default:
-	                    periodData[t].push.apply(periodData[t], _.times(vBlankSpeed, _.constant(trackPeriod[t])));
+	                    periodData[t].push.apply(periodData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(trackPeriod[t])));
 	                }
 	            }
 
@@ -516,7 +521,7 @@ class Converter {
 	                case 0xA:
 	                    var volumeDelta = ((row.parameter & 0xF0) >>> 4) - (row.parameter & 0x0F);
 	                    volumeData[t].push(trackVolume[t]);
-	                    for (var step = 0; step < vBlankSpeed - 1; step++) {
+	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        trackVolume[t] += volumeDelta;
 	                        if (trackVolume[t] < 0) {
 	                            trackVolume[t] = 0;
@@ -534,25 +539,25 @@ class Converter {
 	                        if (trackVolume[t] > 64) {
 	                            trackVolume[t] = 64;
 	                        }
-	                        volumeData[t].push.apply(volumeData[t], _.times(vBlankSpeed, _.constant(trackVolume[t])));
+	                        volumeData[t].push.apply(volumeData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(trackVolume[t])));
 	                        break;
 	                    case 0xB:
 	                        trackVolume[t] -= row.parameter & 0x0F;
 	                        if (trackVolume[t] < 0) {
 	                            trackVolume[t] = 0;
 	                        }
-	                        volumeData[t].push.apply(volumeData[t], _.times(vBlankSpeed, _.constant(trackVolume[t])));
+	                        volumeData[t].push.apply(volumeData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(trackVolume[t])));
 	                        break;
 	                    case 0xC:
 	                        var delay = row.parameter & 0x0F;
-	                        volumeData[t].push.apply(volumeData[t], _.times(Math.min(delay, vBlankSpeed), _.constant(trackVolume[t])));
+	                        volumeData[t].push.apply(volumeData[t], _.times(Math.min(delay, vBlankSpeed*vBlankMultiplier), _.constant(trackVolume[t])));
 	                        if (delay < vBlankSpeed) {
 	                            trackVolume[t] = 0;
-	                            volumeData[t].push.apply(volumeData[t], _.times(Math.max(0, vBlankSpeed - delay), _.constant(trackVolume[t])));
+	                            volumeData[t].push.apply(volumeData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - delay), _.constant(trackVolume[t])));
 	                        }
 	                        break;
 	                    default:
-	                        volumeData[t].push.apply(volumeData[t], _.times(vBlankSpeed, _.constant(trackVolume[t])));
+	                        volumeData[t].push.apply(volumeData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(trackVolume[t])));
 	                    }
 	                    break;
 	                case 0xC:
@@ -564,11 +569,11 @@ class Converter {
 	                    }
 	                    // no break for C command, set volume as usual
 	                default:
-	                    volumeData[t].push.apply(volumeData[t], _.times(vBlankSpeed, _.constant(trackVolume[t])));
+	                    volumeData[t].push.apply(volumeData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(trackVolume[t])));
 	                }
 	            }
 
-	            ticks += vBlankSpeed;
+	            ticks += vBlankSpeed*vBlankMultiplier;
 
 	            for (var t = 0; t < 4; t++) {
 	                if (noteTriggerData[t].length != ticks) {
