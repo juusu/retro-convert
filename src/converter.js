@@ -614,8 +614,13 @@ class Converter {
 	        var el = noteTriggerData[t].shift();
 	        if (el) {
 	            initDma |= (0x1 << (3 - t)); // the channels go backwards in the replayer ...
-	        }
-	        noteTriggerData[t].push(el);
+			}
+			if (restartTick === 0) {
+				noteTriggerData[t].push(el);
+			}
+			else {
+				noteTriggerData[t].push(noteTriggerData[t][restartTick-1]);
+			}
 	    }
 
 		currentBpm = bpm[0];
