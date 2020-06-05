@@ -5,30 +5,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link rel="stylesheet" type="text/css"
+        href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.css">
 </head>
 
 <body>
-    <div class="center">
+    <div id="app" class="ui text container">
         <pre>
-   ________________________________
-   \\_  _  /  __X__ \_  _  /     //
-     /  /_/  _/   /  /  /_/  /  /
-     \_/  \______/\_/\_/  \____/
-
-      -= RETROCONVERTER v0.2.0 =-
-
-   &copy; 2020 JUiCE / iNSANE ^ Reality
-
-Upload your ProTracker .mod file here:
-
-  (Use RetroPlayer v0.1.0 or higher)
-</pre>
-        <form action="#" method="get">
-            <input type="file" />
-        </form>
-        <script src="main.js"></script>
+                             ________________________________
+                             \\_  _  /  __X__ \_  _  /     //
+                               /  /_/  _/   /  /  /_/  /  /
+                               \_/  \______/\_/\_/  \____/
+                          
+                                -= RETROCONVERTER v0.2.0 =-
+                             &copy; 2020 JUiCE / iNSANE ^ Reality
+        </pre>
+        <div class="ui raised segments">
+            <div class="ui two top attached steps">
+                <div class="step" v-bind:class="{ active: !modLoaded }">
+                    <i class="save icon"></i>
+                    <div class="content">
+                        <div class="title">Load</div>
+                        <div class="description">Choose a ProTracker module to convert</div>
+                    </div>
+                </div>
+                <div class="step" v-bind:class="{ active: modLoaded }">
+                    <i class="download icon"></i>
+                    <div class="content">
+                        <div class="title">Save</div>
+                        <div class="description">Save or play converted module</div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui bottom attached segment">
+                <form action="#" method="get">
+                    <input @change="loadMod" type="file" />
+                </form>
+            </div>
+        </div>
     </div>
 </body>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.4.1/semantic.min.js"></script>
+<script src="main.js"></script>
 
 <style>
     body {
@@ -39,12 +59,14 @@ Upload your ProTracker .mod file here:
         margin: auto;
         width: 400px;
     }
+
     @font-face {
         font-family: mOsOuL;
         src: url("mO'sOul_v1.0.ttf");
     }
 
     pre {
+        line-height: 1.0;
         font-family: mOsOuL;
     }
 </style>

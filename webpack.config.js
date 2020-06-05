@@ -10,6 +10,11 @@ module.exports = {
         { test: /\.(html|ttf)$/i, loader: "file-loader", options: { name: '[name].[ext]' }}
     ]
   },
+  resolve: {
+    alias: {
+      'vue$': 'vue/dist/vue.esm.js' // 'vue/dist/vue.common.js' for webpack 1
+    }
+  },
   plugins: [
     new CleanWebpackPlugin()
   ]
