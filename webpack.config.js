@@ -1,4 +1,5 @@
 const { CleanWebpackPlugin } = require('clean-webpack-plugin');
+const { VueLoaderPlugin } = require('vue-loader');
 const path = require('path');
 
 module.exports = {
@@ -7,6 +8,7 @@ module.exports = {
   module: {
     rules: [
         { test: /\.js$/, exclude: /node_modules/, loader: "babel-loader" },
+        { test: /\.vue$/, loader: "vue-loader" },
         { test: /\.(html|ttf)$/i, loader: "file-loader", options: { name: '[name].[ext]' }}
     ]
   },
@@ -16,6 +18,7 @@ module.exports = {
     }
   },
   plugins: [
-    new CleanWebpackPlugin()
+    new CleanWebpackPlugin(),
+    new VueLoaderPlugin()
   ]
 };

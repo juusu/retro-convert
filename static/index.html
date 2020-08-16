@@ -37,11 +37,16 @@
                     </div>
                 </div>
             </div>
-            <div class="ui bottom attached segment">
+            <div class="ui bottom attached segment" v-if="!modLoaded">
                 <form action="#" method="get">
-                    <input @change="loadMod" type="file" />
+                    <file-reader @loaded="convertMod"></file-reader>
                 </form>
             </div>
+            <div class="ui bottom attached segment" v-else>
+                <span>Great success, jak se maš!</span>
+                <button @click="saveRcm">save it!</button>
+                <button @click="play">play it!</button>
+            </div>            
         </div>
     </div>
 </body>
