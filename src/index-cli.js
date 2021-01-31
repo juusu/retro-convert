@@ -19,6 +19,11 @@ const yargs = require("yargs")
         default: true,
         type: "boolean"
     })
+    .option("y", {
+        alias: "sync",
+        default: true,
+        type: "boolean"
+    })
     .argv;
 
 if (yargs._.length !== 1) {

@@ -11,27 +11,27 @@
   "license": "ISC",
   "dependencies": {
     "buffer-splice": "^1.0.0",
-    "element-ui": "^2.13.2",
-    "file-saver": "^2.0.2",
-    "lodash": "^4.17.5",
-    "paulajs": "e:\\__usb\\__code\\Paula.js",
-    "vue": "^2.6.11",
-    "yargs": "^15.3.1"
+    "element-ui": "^2.14.1",
+    "file-saver": "^2.0.5",
+    "lodash": "^4.17.20",
+    "paulajs": "^1.1.0",
+    "vue": "^2.6.12",
+    "yargs": "^15.4.1"
   },
   "devDependencies": {
-    "@babel/cli": "^7.10.4",
-    "@babel/core": "^7.10.4",
-    "@babel/plugin-proposal-class-properties": "^7.10.4",
-    "@babel/plugin-proposal-private-methods": "^7.10.4",
-    "@babel/preset-env": "^7.10.4",
+    "@babel/cli": "^7.12.7",
+    "@babel/core": "^7.12.7",
+    "@babel/plugin-proposal-class-properties": "^7.12.1",
+    "@babel/plugin-proposal-private-methods": "^7.12.1",
+    "@babel/preset-env": "^7.12.7",
     "babel-eslint": "^10.1.0",
-    "babel-loader": "^8.1.0",
+    "babel-loader": "^8.2.1",
     "clean-webpack-plugin": "^3.0.0",
-    "file-loader": "^6.0.0",
+    "file-loader": "^6.2.0",
     "standardx": "^5.0.0",
-    "vue-loader": "^15.9.3",
-    "vue-template-compiler": "^2.6.11",
-    "webpack": "^4.43.0",
+    "vue-loader": "^15.9.5",
+    "vue-template-compiler": "^2.6.12",
+    "webpack": "^4.44.2",
     "webpack-cli": "^3.3.12"
   }
 }

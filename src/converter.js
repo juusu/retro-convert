@@ -181,6 +181,9 @@ class Converter {
 
 	    var offsetInstruments = [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}];
 
+		var syncChannel = [0,0,0,0];
+		var syncData = {};
+
 	    var startRow = 0;
 	    var nextP = 0;
 	    var loopCount = 0;
@@ -218,7 +221,7 @@ class Converter {
 	            var patternBreak = false;
 	            startRow = 0;
 
-	            // pick up speed first
+	            // pick up speed first; also pick up sync data
 	            for (var t = 0; t < 4; t++) {
 	                // read row
 	                var row = mod.sequence[p].tracks[t][r];
@@ -231,7 +234,11 @@ class Converter {
 	                    } else {
 							newBpm = row.parameter;
 	                    }
-	                    break;
+						break;
+					case 0x8:
+						syncData[ticks] = syncData[ticks] || [];
+						syncData[ticks].push([syncChannel[t],row.parameter]);
+						break;
 	                case 0xD:
 	                    patternBreak = true;
 	                    startRow = ((row.parameter & 0xF0) >>> 4) * 10 + (row.parameter & 0x0F);
@@ -270,6 +277,9 @@ class Converter {
 	                            }
 	                        }
 							break;
+						case 0x8:
+							syncChannel[t] = row.parameter & 0x0F;
+							break;
 						case 0xE:
 							vBlankMultiplier = (row.parameter & 0x0F) + 1;
 							break;
@@ -307,7 +317,7 @@ class Converter {
 	                        noteTriggerData[t].push.apply(noteTriggerData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(false)));
 	                        instrumentData[t].push(instrumentChange ? trackInstrumentNumber[t] : 0);
 	                        instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
-	                        break;
+							break;
 	                    case 0xE:
 	                        switch ((row.parameter & 0xF0) >>> 4) {
 	                        case 0xD:
@@ -320,7 +330,7 @@ class Converter {
 	                            }
 	                            noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - delay - 1), _.constant(false)));
 	                            instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - delay - 1), _.constant(0)));
-	                            break;
+								break;
 	                        case 0x9:
 	                            var delay = row.parameter & 0x0F;
 	                            for (var step = 0; step < vBlankSpeed / delay; step++) {
@@ -634,11 +644,21 @@ class Converter {
 	        for (var t = 0; t < 4; t++) {
 
 				// interleave tempo changes in first track
-				if ((uses.ciaTempoChange) && (bpm[tick]!==currentBpm) && (t === 0)) {
+				if ((uses.ciaTempoChange) && (t===0) && (bpm[tick]!==currentBpm)) {
 					var controlWord = 0xC0000000; // set control bits, command (set tempo = 0) and multiplier-1
 					controlWord |= (bpm[tick] & 0xFF); // set tempo
 					trackData[t].push(controlWord);
 					currentBpm = bpm[tick];
+				}
+
+				// also interleave sync data in first track
+				if ((yargs.sync) && (t === 0) && (syncData[tick])) {
+					for (var i=0; i<syncData[tick].length; i++) {
+						var controlWord = 0xC0002000; // set control bits, command (sync = 2) 
+						controlWord |= ((syncData[tick][i][0] << 8) & 0x0F00); // sync channel
+						controlWord |= syncData[tick][i][1] & 0xFF; // sync value
+						trackData[t].push(controlWord);
+					}
 				}
 
 	            var word = 0x00000000;

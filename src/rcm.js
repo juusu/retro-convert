@@ -85,9 +85,9 @@ class Rcm {
         offset += 2;
         
         // skip over the decompression buffer sizes
-        offset += (this.tracks[0].length * 2);
+        offset += (this.tracks.length * 2);
 
-        this.sampleData = data.slice(offset);
+        this.sampleData = data.buffer.slice(offset);
     }
 }
 
