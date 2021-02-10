@@ -131,8 +131,8 @@ var app = new Vue({
 
                                     switch (command) {
                                         case 0:
-                                            var multiplier = (command >>> 8) & 0xf;
-                                            var tempo = command & 0xff;
+                                            var multiplier = (parameter >>> 8) & 0xf;
+                                            var tempo = parameter & 0xff;
                                             vm.player.tempo = tempo * (multiplier + 1);
                                             // set tempo
                                             break;
