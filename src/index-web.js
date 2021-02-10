@@ -57,6 +57,7 @@ var app = new Vue({
             if (!this.rcm) { 
                 this.rcm = new Rcm(this.rcmData);
                 this.player.dmaBits = this.rcm.dmaBits; 
+                this.player.tempo = this.rcm.tempo;
             }
             if (!this.audioContext) {
                 this.audioContext = new AudioContext();
@@ -115,7 +116,35 @@ var app = new Vue({
                                 vm.paula.channel[track].EN = false;
                             }
                             // decode the word 
-                            var word = vm.rcm.tracks[track][vm.player.playbackPointer[track]];
+                            // and process commands if there are any
+                            do {
+                                var isCommand = false;
+                                var word = vm.rcm.tracks[track][vm.player.playbackPointer[track]];
+
+                                if ((word >>> 30) === 3) {
+                                    
+                                    isCommand = true;
+                                    vm.player.playbackPointer[track]++;
+
+                                    var command = (word >>> 12) & 0x7;
+                                    var parameter = word & 0xfff;
+
+                                    switch (command) {
+                                        case 0:
+                                            var multiplier = (command >>> 8) & 0xf;
+                                            var tempo = command & 0xff;
+                                            vm.player.tempo = tempo * (multiplier + 1);
+                                            // set tempo
+                                            break;
+                                        case 1:
+                                            // set led filter (not implemented in web player)
+                                            break;
+                                        case 2:
+                                            // sync data (not implemented in web player)
+                                            break;
+                                    }
+                                }
+                            } while (isCommand); // keep processing commands until next note
 
                             vm.player.volume[track] = (word >>> 25) & 0x007F
 
@@ -159,7 +188,7 @@ var app = new Vue({
                     case 1:
                         // rc_Music2
                         // disable DMA for channels with new note flags
-                        vm.paula.CIATA = Math.floor (1773448 / vm.player.tempo);
+                        vm.paula.CIATA = Math.floor (1773448 / vm.player.tempo) - (110 + 362);
 
                         for (var track = 0; track < vm.rcm.tracks.length; track++) {
                             if ((vm.player.dmaBitsTemp >>> (3-track)) & 0x1) {
