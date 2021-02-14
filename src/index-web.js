@@ -220,6 +220,10 @@ var app = new Vue({
                             vm.paula.channel[track].LEN = vm.player.loopLength[track];
 
                             vm.player.playbackPointer[track]++;
+
+                            if (vm.player.playbackPointer[track] >= vm.rcm.tracks[track].length) {
+                                vm.player.playbackPointer[track] = 0;
+                            }
                         }
                         vm.player.playerSection = 0;
                         break;
