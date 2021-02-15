@@ -222,7 +222,7 @@ var app = new Vue({
                             vm.player.playbackPointer[track]++;
 
                             if (vm.player.playbackPointer[track] >= vm.rcm.tracks[track].length) {
-                                vm.player.playbackPointer[track] = 0;
+                                vm.player.playbackPointer[track] = vm.rcm.restartFrom[track];
                             }
                         }
                         vm.player.playerSection = 0;

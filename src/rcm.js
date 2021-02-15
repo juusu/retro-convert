@@ -24,6 +24,8 @@ class Rcm {
             var endTrack = false;
             var track = [];
 
+            var restart;
+
             do {
                 var word = data.readUInt32BE(offset);
                 
@@ -34,7 +36,7 @@ class Rcm {
                 else {
                     offset+=2;
                     word = data.readUInt32BE(offset);
-                    this.restartFrom.push(word);
+                    restart = word;
                     offset+=4;
                     endTrack = true;
                     word = data.readUInt16BE(offset);
@@ -44,9 +46,12 @@ class Rcm {
                 }
             } while (!endTrack);
 
-            track = Compressor.decompressLz(track);
+            var part1 = Compressor.decompressLz(track.slice(0,restart));
+            var part2 = Compressor.decompressLz(track.slice(restart));
 
-            this.tracks.push(track);
+            this.restartFrom.push(part1.length);
+
+            this.tracks.push(part1.concat(part2));
 
         } while (!endTracks);
 
