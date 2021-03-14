@@ -173,10 +173,12 @@ class Converter {
 	    var periodData = [[], [], [], []];
 
 	    var trackInstrumentNumber = [0, 0, 0, 0];
+		var originalInstrumentNumber = [0, 0, 0, 0];
 	    var trackVolume = [0, 0, 0, 0];
 	    var trackPeriod = [0, 0, 0, 0];
 	    var targetPeriod = [0, 0, 0, 0];
 	    var portamentoSpeed = [0, 0, 0, 0];
+		var trackSampleOffset = [0, 0, 0, 0];
 	    var trackVibrato = [{ speed: 0, depth: 0, position: 0 }, { speed: 0, depth: 0, position: 0 }, { speed: 0, depth: 0, position: 0 }, { speed: 0, depth: 0, position: 0 }];
 
 	    var offsetInstruments = [{}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}, {}];
@@ -305,18 +307,30 @@ class Converter {
 
 	                var instrumentChange = false;
 
-	                if ((row.instrument != 0) && (row.instrument != trackInstrumentNumber[t])) {
-	                    trackInstrumentNumber[t] = row.instrument;
-	                    instrumentChange = true;
+	                if (row.instrument != 0) {
+						if (row.instrument != trackInstrumentNumber[t]) {
+							// save original instrument number for later in case of sample offset creates new instruments
+							originalInstrumentNumber[t] = row.instrument;
+	                    	trackInstrumentNumber[t] = originalInstrumentNumber[t];
+	                    	instrumentChange = true;
+						}
+						trackSampleOffset[t]=0;
 	                }
 
 	                if (row.note != 0) {
+						
+						if (trackSampleOffset[t]>0) {
+							Converter.addOffsetInstrument(offsetInstruments, trackInstrumentNumber, originalInstrumentNumber, t, trackSampleOffset, mod, usedInstruments, instrumentMap);
+						}
+
 	                    switch (row.command) {
 	                    case 0x3:
 	                    case 0x5:
 	                        noteTriggerData[t].push.apply(noteTriggerData[t], _.times(vBlankSpeed*vBlankMultiplier, _.constant(false)));
-	                        instrumentData[t].push(instrumentChange ? trackInstrumentNumber[t] : 0);
-	                        instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
+	                        if (vBlankSpeed > 0) {
+								instrumentData[t].push(instrumentChange ? trackInstrumentNumber[t] : 0);
+							}
+							instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
 							break;
 	                    case 0xE:
 	                        switch ((row.parameter & 0xF0) >>> 4) {
@@ -341,47 +355,26 @@ class Converter {
 	                            }
 	                            break;
 	                        default:
-	                            noteTriggerData[t].push(true);
-	                            instrumentData[t].push(trackInstrumentNumber[t]);
+								if (vBlankSpeed > 0) {
+	                            	noteTriggerData[t].push(true);
+	                            	instrumentData[t].push(trackInstrumentNumber[t]);
+								}
 	                            noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(false)));
 	                            instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
 	                        }
 	                        break;
 	                    case 0x9:
-	                        if (row.parameter != 0) {
-	                            if (_.isUndefined(offsetInstruments[trackInstrumentNumber[t] - 1][row.parameter])) {
-	                                var offset = row.parameter << 8;
-	                                if (offset < mod.instruments[trackInstrumentNumber[t] - 1].length) {
-	                                    mod.instruments.push({
-	                                        offset: mod.instruments[trackInstrumentNumber[t] - 1].offset + offset,
-	                                        length: mod.instruments[trackInstrumentNumber[t] - 1].length - offset,
-	                                        loop: {
-	                                            start: mod.instruments[trackInstrumentNumber[t] - 1].loop.start - offset,
-	                                            length: mod.instruments[trackInstrumentNumber[t] - 1].loop.length
-	                                        },
-	                                        finetune: mod.instruments[trackInstrumentNumber[t] - 1].finetune
-	                                    });
-	                                }
-	                                // handle sample offset past the end of the samnple
-	                                else {
-	                                    mod.instruments.push({
-	                                        offset: mod.instruments[trackInstrumentNumber[t] - 1].offset,
-	                                        length: 2,
-	                                        loop: mod.instruments[trackInstrumentNumber[t] - 1].loop,
-	                                        finetune: mod.instruments[trackInstrumentNumber[t] - 1].finetune
-	                                    });
-	                                }
-	                                offsetInstruments[trackInstrumentNumber[t] - 1][row.parameter] = mod.instruments.length;
-	                                usedInstruments.add(mod.instruments.length);
-	                                instrumentMap[mod.instruments.length] = usedInstruments.size;
-	                            }
-	                            trackInstrumentNumber[t] = offsetInstruments[trackInstrumentNumber[t] - 1][row.parameter];
-	                        }
-	                        // no break - fall through the default case for the 9 command, too
+							trackSampleOffset[t] += row.parameter;
+
+							Converter.addOffsetInstrument(offsetInstruments, trackInstrumentNumber, originalInstrumentNumber, t, trackSampleOffset, mod, usedInstruments, instrumentMap);
+	                        
+							// no break - fall through the default case for the 9 command, too
 	                    default:
-	                        noteTriggerData[t].push(true);
-	                        instrumentData[t].push(trackInstrumentNumber[t]);
-	                        noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(false)));
+							if (vBlankSpeed > 0) {
+	                        	noteTriggerData[t].push(true);
+	                        	instrumentData[t].push(trackInstrumentNumber[t]);
+							}
+							noteTriggerData[t].push.apply(noteTriggerData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(false)));
 	                        instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
 	                    }
 	                }
@@ -393,6 +386,13 @@ class Converter {
 	                    }
 	                    instrumentData[t].push.apply(instrumentData[t], _.times(Math.max(0, vBlankSpeed*vBlankMultiplier - 1), _.constant(0)));
 	                }
+
+					// often exploited PT replay bug - sample offset is added twice,
+					// once on new note trigger, and another time whether there's a new note or not
+					// https://modarchive.org/forums/index.php?topic=4029.0
+					if (row.command === 0x9) {
+						trackSampleOffset[t] += row.parameter;
+					}
 	            }
 
 	            // period data
@@ -435,7 +435,9 @@ class Converter {
 	                    }
 	                    break;
 	                case 0x1:
-	                    periodData[t].push(trackPeriod[t]);
+						if (vBlankSpeed > 0) {
+	                    	periodData[t].push(trackPeriod[t]);
+						}
 	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        trackPeriod[t] -= row.parameter;
 	                        if (trackPeriod[t] < this.#MIN_PERIOD) {
@@ -445,8 +447,10 @@ class Converter {
 	                    }
 	                    break;
 	                case 0x2:
-	                    periodData[t].push(trackPeriod[t]);
-	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
+						if (vBlankSpeed > 0) {
+	                    	periodData[t].push(trackPeriod[t]);
+						}
+						for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        trackPeriod[t] += row.parameter;
 	                        if (trackPeriod[t] > this.#MAX_PERIOD) {
 	                            trackPeriod[t] = this.#MAX_PERIOD;
@@ -462,8 +466,10 @@ class Converter {
 	                        }
 	                    }
 	                case 0x5:
-	                    periodData[t].push(trackPeriod[t]);
-	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
+						if (vBlankSpeed > 0) {
+	                    	periodData[t].push(trackPeriod[t]);
+						}
+						for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        trackPeriod[t] += portamentoSpeed[t];
 	                        if ((portamentoSpeed[t] < 0) && (trackPeriod[t] < targetPeriod[t])) {
 	                            trackPeriod[t] = targetPeriod[t];
@@ -486,7 +492,9 @@ class Converter {
 	                    }
 	                    // no break, we do the same thing for 4 and 6 commands
 	                case 0x6:
-	                    periodData[t].push(trackPeriod[t]);
+						if (vBlankSpeed > 0) {
+	                    	periodData[t].push(trackPeriod[t]);
+						}
 	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        periodData[t].push(trackPeriod[t] + Math.floor(this.#vibratoTable[trackVibrato[t].position] * trackVibrato[t].depth / 128));
 	                        trackVibrato[t].position += trackVibrato[t].speed;
@@ -530,7 +538,9 @@ class Converter {
 	                case 0x6:
 	                case 0xA:
 	                    var volumeDelta = ((row.parameter & 0xF0) >>> 4) - (row.parameter & 0x0F);
-	                    volumeData[t].push(trackVolume[t]);
+						if (vBlankSpeed > 0) {
+							volumeData[t].push(trackVolume[t]);
+						}
 	                    for (var step = 0; step < vBlankSpeed*vBlankMultiplier - 1; step++) {
 	                        trackVolume[t] += volumeDelta;
 	                        if (trackVolume[t] < 0) {
@@ -948,6 +958,44 @@ class Converter {
 
 	    return finalBuffer;
 	};
+
+	static addOffsetInstrument(offsetInstruments, trackInstrumentNumber, originalInstrumentNumber, t, trackSampleOffset, mod, usedInstruments, instrumentMap) {
+
+		// check if the instrument was already offset
+		if (trackInstrumentNumber[t] >= offsetInstruments.length) {
+			// find and restore the original instrument number
+			trackInstrumentNumber[t] = originalInstrumentNumber[t];
+		}
+
+		if (_.isUndefined(offsetInstruments[trackInstrumentNumber[t] - 1][trackSampleOffset[t]])) {
+			var offset = trackSampleOffset[t] << 8;
+			if (offset < mod.instruments[trackInstrumentNumber[t] - 1].length) {
+				mod.instruments.push({
+					offset: mod.instruments[trackInstrumentNumber[t] - 1].offset + offset,
+					length: mod.instruments[trackInstrumentNumber[t] - 1].length - offset,
+					loop: {
+						start: mod.instruments[trackInstrumentNumber[t] - 1].loop.start - offset,
+						length: mod.instruments[trackInstrumentNumber[t] - 1].loop.length
+					},
+					finetune: mod.instruments[trackInstrumentNumber[t] - 1].finetune
+				});
+			}
+
+			// handle sample offset past the end of the samnple
+			else {
+				mod.instruments.push({
+					offset: mod.instruments[trackInstrumentNumber[t] - 1].offset,
+					length: 2,
+					loop: mod.instruments[trackInstrumentNumber[t] - 1].loop,
+					finetune: mod.instruments[trackInstrumentNumber[t] - 1].finetune
+				});
+			}
+			offsetInstruments[trackInstrumentNumber[t] - 1][trackSampleOffset[t]] = mod.instruments.length;
+			usedInstruments.add(mod.instruments.length);
+			instrumentMap[mod.instruments.length] = usedInstruments.size;
+		}
+		trackInstrumentNumber[t] = offsetInstruments[trackInstrumentNumber[t] - 1][trackSampleOffset[t]];
+	}
 }
 
 module.exports = Converter;
