@@ -12,7 +12,7 @@ import font from "../static/mO'sOul_v1.0.ttf"
 
 import FileReader from "./FileReader.vue";
 
-const BUFFER_SIZE = 4096;
+const BUFFER_SIZE = 1024;
 
 var app = new Vue({
     el: '#app',
@@ -229,9 +229,9 @@ var app = new Vue({
                         break;
                 }
             }
-            this.paulaNode.onaudioprocess = function (e) {
+            this.paulaNode.addEventListener('audioprocess', function (e) {
                 var output = e.outputBuffer.getChannelData(0); for (var i=0; i<BUFFER_SIZE; i++) { output[i] = vm.paula.getNextSample(); }
-            }
+            });
             this.paulaNode.connect(this.audioContext.destination);
         }
     },
