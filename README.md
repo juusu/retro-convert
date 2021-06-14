@@ -40,8 +40,13 @@ work)
 Use the prebuilt online version at http://malimedo.com/rc/index.html
 
 This doesn't send your music data to the server, all of the conversion 
-happens client-side. Feel free to download the files and run the 
-conversion while offline :D
+happens client-side.
+
+### Download prebuild web UI for offline use
+
+If you'd rather use the web UI offline, head on over to the
+[Releases](https://github.com/juusu/retro-convert/releases) page and
+download the .zip with the latest version.
 
 ## Using from CLI:
 
