@@ -121,14 +121,14 @@ class Converter {
 	    ]
 	];
 
-	static convert (mod, yargs) {
+	static convert (mod, yargs, logger) {
 
 		var uses = {
 			"ciaTempo": false,
 			"ciaTempoChange": false
 		}
 
-	    console.log("Original pattern data length", mod.patterns.length * 1024, "bytes");
+	    logger.log("Original pattern data:", mod.patterns.length * 1024, "bytes");
 
 	    var usedInstruments = new Set();
 
@@ -159,10 +159,10 @@ class Converter {
 	        }
 	    }
 
-	    console.log("\nUnused samples removed:", removedSamples);
-	    console.log("Remaining samples:", usedInstruments.size);
-	    console.log("Sample data saved:", sampleBytesSaved, "bytes");
-	    console.log("Optimized sample data length:", mod.sampleData.length, "bytes");
+	    logger.log("\nUnused samples removed:", removedSamples);
+	    logger.log("Remaining samples:", usedInstruments.size);
+	    logger.log("Sample data saved:", sampleBytesSaved, "bytes");
+	    logger.log("Optimized sample data:", mod.sampleData.length, "bytes");
 
 	    var vBlankSpeed = 6;
 	    var ticks = 0;
@@ -211,8 +211,8 @@ class Converter {
 	            var currentPosition = JSON.stringify([p, r, loopCount]);
 
 	            if (patternBreak && visitedPositions.has(currentPosition)) {
-	                console.log("Non-standard restart detected! This mod loops from pattern", p, "row", r, ".");
-	                console.log("Restart from tick:", visitedPositions.get(currentPosition));
+	                logger.log("Non-standard restart detected! This mod loops from pattern", p, "row", r, ".");
+	                logger.log("Restart from tick:", visitedPositions.get(currentPosition));
 	                endSong = true;
 	                restartTick = visitedPositions.get(currentPosition);
 	                break;
@@ -231,7 +231,6 @@ class Converter {
 	                switch (row.command) {
 	                case 0xF:
 	                    if (row.parameter < 0x20) {
-	                        // console.info("vblank tempo set to:",mod.sequence[p].tracks[t][r].parameter);
 	                        vBlankSpeed = row.parameter;
 	                    } else {
 							newBpm = row.parameter;
@@ -245,7 +244,7 @@ class Converter {
 	                    patternBreak = true;
 	                    startRow = ((row.parameter & 0xF0) >>> 4) * 10 + (row.parameter & 0x0F);
 	                    if (startRow > 63) {
-	                        console.info("Ignoring invalid pattern break line number:", startRow, "in song position", p);
+	                        logger.info("Ignoring invalid pattern break line number:", startRow, "in song position", p);
 	                        startRow = 0;
 	                    }
 	                    break;
@@ -582,7 +581,7 @@ class Converter {
 	                    break;
 	                case 0xC:
 	                    if (row.parameter > 64) {
-	                        console.error("Volume > 64 found!");
+	                        logger.error("Volume > 64 found!");
 	                        trackVolume[t] = 64;
 	                    } else {
 	                        trackVolume[t] = row.parameter;
@@ -597,19 +596,19 @@ class Converter {
 
 	            for (var t = 0; t < 4; t++) {
 	                if (noteTriggerData[t].length != ticks) {
-	                    console.error("TRIGGER!", mod.sequence[p].tracks[t][r]);
+	                    logger.error("Invalid note trigger data!", mod.sequence[p].tracks[t][r]);
 	                    process.exit(1);
 	                }
 	                if (instrumentData[t].length != ticks) {
-	                    console.error("INSTRUMENT!", mod.sequence[p].tracks[t][r]);
+	                    logger.error("Invalid instrument data!", mod.sequence[p].tracks[t][r]);
 	                    process.exit(1);
 	                }
 	                if (volumeData[t].length != ticks) {
-	                    console.error("VOLUMEN!", mod.sequence[p].tracks[t][r]);
+	                    logger.error("Invalid volume data!", mod.sequence[p].tracks[t][r]);
 	                    process.exit(1);
 	                }
 	                if (periodData[t].length != ticks) {
-	                    console.error("AUNT IRMA!", mod.sequence[p].tracks[t][r]);
+	                    logger.error("Invalid period data!", mod.sequence[p].tracks[t][r]);
 	                    process.exit(1);
 	                }
 	            }
@@ -624,11 +623,11 @@ class Converter {
 		
 		if (numTempoChanges > 0) {
 			uses.ciaTempoChange = true;
-			console.log("\nSong changes CIA tempo!");
+			logger.log("\nSong changes CIA tempo!");
 		}
 
-	    console.log("\nMusic duration:", ticks, "frames");
-	    console.log("\nRestart from tick:", restartTick);
+	    logger.log("\nMusic duration:", ticks, "frames");
+	    logger.log("\nRestart from tick:", restartTick);
 
 	    // zip the note trigger, instrument, volume and period data for each channel
 	    var trackData = [[], [], [], []];
@@ -693,7 +692,7 @@ class Converter {
 	                }
 
 	                if ((periodChange < -128) || (periodChange > 127)) {
-	                    console.error("Invalid period change!");
+	                    logger.error("Invalid period change!");
 	                    // process.exit(1);
 	                }
 	                word |= (periodChange & 0x00FF);
@@ -713,11 +712,11 @@ class Converter {
 	    var uncompressedTracksSize = 0;
 
 	    for (var t = 0; t < 4; t++) {
-	        console.log("Track", t, "length:", trackData[t].length * 4, "bytes");
+	        logger.log("Track", t, "data:", trackData[t].length * 4, "bytes");
 	        uncompressedTracksSize += trackData[t].length * 4;
 	    }
 
-	    console.log("Uncompressed track data:", uncompressedTracksSize, "bytes\n");
+	    logger.log("Uncompressed track data:", uncompressedTracksSize, "bytes\n");
 
 	    var restartPos = [];
 
@@ -727,12 +726,18 @@ class Converter {
 	        var compressedTracks = [[], [], [], []];
 	        var bufferSizes = [];
 
+			if (!yargs.debug) {
+				console.log("Compressing track data ...\n");
+			}
+
 	        for (var t = 0; t < 4; t++) {
 	            // var slidingWindowSize = mod.patterns.length * 64;
 	            var slidingWindowSize = ticks;
-	            console.log("Absolute upper bound on sliding window size:", slidingWindowSize, "(", slidingWindowSize * 4, "bytes )");
 
-	            console.log("\nLZ pass 1\n------");
+				if (yargs.debug) {
+	            	logger.log("Absolute upper bound on sliding window size:", slidingWindowSize, "(", slidingWindowSize * 4, "bytes )");
+	            	logger.log("\nLZ pass 1\n------");
+				}
 
 	            var part1 = Compressor.compressLz(trackData[t].slice(0, restartTick), slidingWindowSize);
 	            var part2 = Compressor.compressLz(trackData[t].slice(restartTick), slidingWindowSize);
@@ -742,28 +747,33 @@ class Converter {
 	            var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
 
 	            if (_.isEqual(trackData[t], decompressedTrack)) {
-	                console.log("OK!");
+					if (yargs.debug) {
+	                	logger.log("OK!");
+					}
 	            } else {
-	                console.log("\n(De)compression verification error!\n-----------------------------");
+	                logger.error("\n(De)compression verification error!\n-----------------------------");
 
-	                console.log("Original data:");
+	                logger.error("Original data:");
 	                Compressor.logDebug(trackData[t], 40);
-	                console.log("Compressed data:");
+	                logger.error("Compressed data:");
 	                Compressor.logDebug(compressedTracks[t], 40);
-	                console.log("Decompressed data:");
+	                logger.error("Decompressed data:");
 	                Compressor.logDebug(decompressedTrack, 40);
+					process.exit(1);
 	            }
 
 	            var trackDataSize = Compressor.getTrackDataSize(compressedTracks[t]);
-	            console.log("Compressed track data size:", trackDataSize, "bytes");
-
 	            var totalSize = trackDataSize + (slidingWindowSize * 4);
-	            console.log("Track data + decompression buffer:", totalSize);
+
+				if (yargs.debug) {
+					logger.log("Compressed track data size:", trackDataSize, "bytes");
+	            	logger.log("Track data + decompression buffer:", totalSize);
+				}
 
 	            var slidingWindowSize = Math.floor((slidingWindowSize * 4 - trackDataSize) / 4);
 
 	            if (slidingWindowSize <= 0) {
-	                console.error("ERROR: It's mot possible to compress pattern data to be smaller than the original for this mod!");
+	                logger.error("ERROR: It's mot possible to compress pattern data to be smaller than the original for this mod!");
 	                process.exit(1);
 	            }
 
@@ -773,8 +783,10 @@ class Converter {
 	            var lowerBound = 0;
 
 	            do {
-	                console.log("\nLZ pass", pass, "\n------");
-	                console.log("Current sliding window size:", lowerBound, "<", slidingWindowSize, "<", upperBound, "(", slidingWindowSize * 16, "bytes )");
+					if (yargs.debug) {
+	                	logger.log("\nLZ pass", pass, "\n------");
+	                	logger.log("Current sliding window size:", lowerBound, "<", slidingWindowSize, "<", upperBound, "(", slidingWindowSize * 16, "bytes )");
+					}
 
 	                var part1 = Compressor.compressLz(trackData[t].slice(0, restartTick), slidingWindowSize);
 	                var part2 = Compressor.compressLz(trackData[t].slice(restartTick), slidingWindowSize);
@@ -784,30 +796,39 @@ class Converter {
 	                var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
 
 	                if (_.isEqual(trackData[t], decompressedTrack)) {
-	                    console.log("Compressed data verification OK!");
+						if (yargs.debug) {
+	                    	logger.log("Compressed data verification OK!");
+						}
 	                } else {
-	                    console.log("\n(De)compression verification error!\n-----------------------------");
+	                    logger.error("\n(De)compression verification error!\n-----------------------------");
 
-	                    console.log("Original data:");
+	                    logger.error("Original data:");
 	                    Compressor.logDebug(trackData[t], 40);
-	                    console.log("Compressed data:");
+	                    logger.error("Compressed data:");
 	                    Compressor.logDebug(compressedTracks[t], 40);
-	                    console.log("Decompressed data:");
+	                    logger.error("Decompressed data:");
 	                    Compressor.logDebug(decompressedTrack, 40);
+						process.exit(1);
 	                }
 
 	                trackDataSize = Compressor.getTrackDataSize(compressedTracks[t]);
 
 	                var newTotalSize = trackDataSize + (slidingWindowSize * 4);
-	                console.log("Track data + decompression buffer:", newTotalSize);
+					if (yargs.debug) {
+	                	logger.log("Track data + decompression buffer:", newTotalSize);
+					}
 
 	                if (newTotalSize < totalSize) {
-	                    console.log("Smaller! - trying to reduce buffer further!");
+						if (yargs.debug) {
+	                    	logger.log("Smaller! - trying to reduce buffer further!");
+						}
 	                    upperBound = slidingWindowSize;
 	                    totalSize = newTotalSize;
 	                    slidingWindowSize = Math.floor(slidingWindowSize - ((upperBound - lowerBound) / 2));
 	                } else {
-	                    console.log("Bigger! - increasing buffer size!");
+						if (yargs.debug) {
+	                    	logger.log("Larger! - increasing buffer size!");
+						}
 	                    lowerBound = slidingWindowSize;
 	                    slidingWindowSize = Math.floor(slidingWindowSize + ((upperBound - lowerBound) / 2));
 	                }
@@ -815,8 +836,10 @@ class Converter {
 	                pass = pass + 1;
 	            } while (upperBound - lowerBound > 1);
 
-	            console.log("\nFinal LZ pass\n------");
-	            console.log("Optimal sliding window size is:", upperBound);
+				if (yargs.debug) {
+					logger.log("\nFinal LZ pass\n------");
+					logger.log("Optimal sliding window size is:", upperBound);
+				}
 	            // compress again with the optimal window size because it might not be the last pass
 	            var part1 = Compressor.compressLz(trackData[t].slice(0, restartTick), upperBound);
 	            var part2 = Compressor.compressLz(trackData[t].slice(restartTick), upperBound);
@@ -828,22 +851,28 @@ class Converter {
 	            var decompressedTrack = Compressor.decompressLz(compressedTracks[t]);
 
 	            if (_.isEqual(trackData[t], decompressedTrack)) {
-	                console.log("OK!");
+					if (yargs.debug) {
+	                	logger.log("OK!");
+					}
 	            } else {
-	                console.log("\n(De)compression verification error!\n-----------------------------");
+	                logger.error("\n(De)compression verification error!\n-----------------------------");
 
-	                console.log("Original data:");
+	                logger.error("Original data:");
 	                Compressor.logDebug(trackData[t], 40);
-	                console.log("Compressed data:");
+	                logger.error("Compressed data:");
 	                Compressor.logDebug(compressedTracks[t], 40);
-	                console.log("Decompressed data:");
+	                logger.error("Decompressed data:");
 	                Compressor.logDebug(decompressedTrack, 40);
+
+					process.exit(1);
 	            }
 
 	            trackDataSize = Compressor.getTrackDataSize(compressedTracks[t]);
 
 	            var newTotalSize = trackDataSize + (upperBound * 4);
-	            console.log("Track data + decompression buffer:", newTotalSize);
+				if (yargs.debug) {
+	            	console.log("Track data + decompression buffer:", newTotalSize,"\n");
+				}
 	            bufferSizes.push(upperBound);
 	        }
 	    }
@@ -855,28 +884,34 @@ class Converter {
 	        trackData = compressedTracks;
 	    }
 
-	    console.log("\nREPORT\n------");
+	    logger.log("REPORT\n------\n");
 
 	    for (var t = 0; t < 4; t++) {
-	        console.log("Track", t, "data length:", trackData[t].length * 4);
+	        logger.log("Track", t, "compressed data:", trackData[t].length * 4, "bytes");
 	    }
 	    var trackDataLength = trackData[0].length * 4 + trackData[1].length * 4 + trackData[2].length * 4 + trackData[3].length * 4;
-	    console.log("Total track data length:", trackDataLength);
+	    logger.log("Compressed track data:", trackDataLength, "bytes");
 
 	    var instrumentDataLength = usedInstruments.size * 12;
-	    console.log("Instrument data length:", instrumentDataLength);
+
+		var totalBufferLength = 0;
 
 	    for (var t = 0; t < 4; t++) {
-	        console.log("Track", t, "decompression buffer length:", bufferSizes[t] * 4);
+			totalBufferLength += bufferSizes[t]*4;
+	        logger.log("Track", t, "decompression buffer required:", bufferSizes[t] * 4, "bytes");
 	    }
 
+		logger.log("Total decompression buffer required:", totalBufferLength, "bytes");
+
+		logger.log("Instrument data size:", instrumentDataLength, "bytes");
+
 	    var sampleDataLength = mod.sampleData.length;
-	    console.log("Sample data length:", sampleDataLength);
+	    logger.log("Sample data size:", sampleDataLength, "bytes");
 
 	    var metaDataLength = 38;
-	    console.log("Meta data length:", metaDataLength);
+	    logger.log("Meta data size:", metaDataLength, "bytes");
 
-	    console.log("Final file length:", trackDataLength + instrumentDataLength + sampleDataLength + metaDataLength);
+	    logger.log("Final file size:", trackDataLength + instrumentDataLength + sampleDataLength + metaDataLength, "bytes");
 
 	    var allTracksWordSet = new Set();
 
@@ -895,7 +930,7 @@ class Converter {
 	        outData.push(0xFF);
 	        outData.push(0xFF);
 
-	        console.log("Track", t, "has", wordSet.size, "different values.");
+	        // logger.log("Track", t, "has", wordSet.size, "different values.");
 
 	        // restart pointer
 	        outData.push((restartPos[t] >> 24) & 0xFF);
@@ -904,7 +939,7 @@ class Converter {
 	        outData.push(restartPos[t] & 0xFF);
 	    }
 
-	    console.log("All tracks have", allTracksWordSet.size, "different values.");
+	    // logger.log("All tracks have", allTracksWordSet.size, "different values.");
 
 	    outData.push(0xFF);
 	    outData.push(0xFF);

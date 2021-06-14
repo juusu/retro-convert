@@ -8,6 +8,7 @@
 const Module = require("./ptmod");
 const Converter = require("./converter");
 const fs = require("fs");
+const _ = require("lodash");
 const yargs = require("yargs")
     .option("c", {
         alias: "compress",
@@ -22,6 +23,11 @@ const yargs = require("yargs")
     .option("y", {
         alias: "sync",
         default: true,
+        type: "boolean"
+    })
+    .option("d", {
+        alias: "debug",
+        default: false,
         type: "boolean"
     })
     .argv;
@@ -46,9 +52,14 @@ function onFileLoaded (err, data) {
 
     var mod = new Module(data);
 
-    var finalBuffer = Converter.convert(mod, yargs);
+    var finalBuffer = Converter.convert(mod, yargs, console);
 
-    fs.writeFile("converted.nmod", finalBuffer, (err) => {
+    var fileName = _.find(inFileName.split("."),function(string) { return string != "mod" }).concat(".rcm");
+
+    fs.writeFile(
+        _.find(inFileName.split("."),function(string) { return string != "mod" }).concat(".rcm"), 
+        finalBuffer, 
+        (err) => {
         if (err) throw err;
         console.log("The file has been saved!");
     });

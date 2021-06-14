@@ -46,7 +46,7 @@ var app = new Vue({
     },
     methods: {
         convertMod: function(e) {
-            this.rcmData = Converter.convert(new Module(new Buffer(e.data)), { compress: true, samples: true, sync: true });
+            this.rcmData = Converter.convert(new Module(new Buffer(e.data)), { compress: true, samples: true, sync: true }, console);
             this.songName = e.songName;
         },
         saveRcm: function() {

@@ -48,13 +48,9 @@ class Compressor {
             }
         }
 
-        console.log("Matches:", numMatches, "(avg match length)", matchSize / numMatches);
-
         var compressedTracksSize = 0;
 
         compressedTracksSize += compressedTrack.length * 4;
-
-        console.log("Compressed track data:", compressedTracksSize, "bytes");
 
         return compressedTrack;
     }
