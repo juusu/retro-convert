@@ -4,7 +4,7 @@
 
 This is a converter for music files in .MOD format (Amiga Protracker
 modules). It converts them to .RCM format meant to be used with the
-[Retro Replay playroutine]https://github.com/juusu/retro-replay
+[Retro Replay playroutine](https://github.com/juusu/retro-replay)
 
 It is an universal music format for the Amiga, with a (hopefully)
 more flexible and reliable replay code than the original ProTracker
