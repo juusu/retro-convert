@@ -144,18 +144,17 @@ class Converter {
 
 	    var removedSamples = 0;
 	    var sampleBytesSaved = 0;
-
 	    var instrumentMap = [];
 	    var currentInstrument = 1;
 
 	    for (var i = 0; i < mod.instruments.length; i++) {
-	        if (mod.instruments[i].length > 0) {
-	            if (!usedInstruments.has(mod.instruments[i].number)) {
+	        if (!usedInstruments.has(mod.instruments[i].number)) {
+			    if (mod.instruments[i].length > 0) {
 	                sampleBytesSaved += mod.killInstrument(mod.instruments[i].number);
 	                removedSamples++;
-	            } else {
-	                instrumentMap[i + 1] = currentInstrument++;
-	            }
+	            } 
+			} else {
+	            instrumentMap[i + 1] = currentInstrument++;
 	        }
 	    }
 
