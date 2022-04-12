@@ -1,4 +1,4 @@
-# RetroConverter v1.0.0
+# RetroConverter v1.0.2
 
 ## What is it?
 

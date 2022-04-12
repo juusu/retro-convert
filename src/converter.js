@@ -423,8 +423,18 @@ class Converter {
 	                                break;
 	                            default:
 	                                var finetune = mod.instruments[trackInstrumentNumber[t] - 1].finetune;
+									var noteIndex = this.#periodTable[finetune].indexOf(
+										this.#periodTable[finetune].find(function (period) { return period <= trackPeriod[t] }) 
+									) + arpOffsets[arpStep];
+									
+									// handle arpeggio wrap like PT
+									if (noteIndex > 35) {
+										finetune++;
+										noteIndex-=36;
+									}
+
 	                                periodData[t].push(
-	                                    this.#periodTable[finetune][this.#periodTable[finetune].indexOf(this.#periodTable[finetune].find(function (period) { return period <= trackPeriod[t]; })) + arpOffsets[arpStep]]
+	                                    this.#periodTable[finetune][noteIndex]
 	                                );
 	                            }
 	                        }
